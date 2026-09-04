@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Douglas County FLUM Zoning Map - Shared Public Comments</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-geosearch@3.11.0/dist/geosearch.css"/>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/esri-leaflet@3.0.12/dist/esri-leaflet.js"></script>
+
+  <script src="https://unpkg.com/leaflet-geosearch@3.11.0/dist/geosearch.umd.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    #app-container {
+      display: flex;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    #map { 
+      flex: 1;
+      height: 100%;
+      position: relative;
+    }
+
+    /* Dock Search Bar to Upper-Right Corner */
+    .leaflet-control-geosearch {
+      position: absolute !important;
+      top: 10px !important;
+      right: 10px !important;
+      z-index: 1000 !important;
+      margin: 0 !important;
+    }
+
+    /* Docked Sidebar Panel */
+    #sidebar {
+      width: 360px;
+      height: 100%;
+      background: #f8f9fa;
+      border-left: 2px solid #ccc;
+      box-sizing: border-box;
+      padding: 16px;
+      overflow-y: auto;
+      box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+    }
+
+    .comment-form input, 
+    .comment-form textarea {
+      width: 100%;
+      margin: 4px 0 10px 0;
+      padding: 8px;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    .comment-form label {
+      font-size: 13px;
+      font-weight: bold;
+      color: #333;
+    }
+
+    .btn-submit {
+      background-color: #0084A8;
+      color: white;
+      border: none;
+      padding: 10px;
+      cursor: pointer;
+      border-radius: 4px;
+      width: 100%;
+      font-weight: bold;
+    }
+
+    .btn-submit:hover {
+      background-color: #162E93;
+    }
+
+    .btn-cancel {
+      background-color: #7f8c8d;
+      color: white;
+      border: none;
+      padding: 6px;
+      cursor: pointer;
+      border-radius: 4px;
+      width: 100%;
+      margin-top: 6px;
+    }
+
+    .comment-card {
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 10px;
+      margin-top: 10px;
+      position: relative;
+    }
+
+    .btn-like-card {
+      background-color: #2e7d32;
+      color: white;
+      border: none;
+      padding: 4px 8px;
+      font-size: 11px;
+      border-radius: 3px;
+      cursor: pointer;
+      margin-top: 8px;
+      margin-right: 4px;
+    }
+
+    .btn-like-card:hover {
+      background-color: #1b5e20;
+    }
+
+    .btn-reply-toggle {
+      background-color: #0288d1;
+      color: white;
+      border: none;
+      padding: 4px 8px;
+      font-size: 11px;
+      border-radius: 3px;
+      cursor: pointer;
+      margin-top: 8px;
+      margin-right: 4px;
+    }
+
+    .btn-reply-toggle:hover {
+      background-color: #01579b;
+    }
+
+    .btn-delete-card {
+      background-color: #d32f2f;
+      color: white;
+      border: none;
+      padding: 4px 8px;
+      font-size: 11px;
+      border-radius: 3px;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+
+    .btn-delete-card:hover {
+      background-color: #9a0007;
+    }
+
+    /* Nested Reply Styling */
+    .reply-container {
+      margin-top: 8px;
+      padding-left: 10px;
+      border-left: 2px solid #0084A8;
+    }
+
+    .reply-card {
+      background: #f1f3f4;
+      border-radius: 3px;
+      padding: 6px 8px;
+      margin-top: 6px;
+      font-size: 12px;
+    }
+
+    .reply-form {
+      margin-top: 8px;
+      padding: 8px;
+      background: #eef7f9;
+      border-radius: 4px;
+    }
+
+    .reply-form input,
+    .reply-form textarea {
+      font-size: 11px;
+      margin-bottom: 4px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    /* Floating Map Legend Styles */
+    .legend {
+      background: white;
+      padding: 10px 14px;
+      line-height: 18px;
+      color: #333;
+      border-radius: 6px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+      max-height: 280px;
+      overflow-y: auto;
+      font-family: sans-serif;
+      font-size: 12px;
+    }
+    .legend h4 {
+      margin: 0 0 8px 0;
+      font-size: 13px;
+      font-weight: bold;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 4px;
+    }
+    .legend-section-title {
+      font-weight: bold;
+      margin: 6px 0 2px 0;
+      color: #555;
+      font-size: 11px;
+      text-transform: uppercase;
+    }
+    .legend i {
+      width: 14px;
+      height: 14px;
+      float: left;
+      margin-right: 8px;
+      opacity: 0.8;
+      border: 1px solid #999;
+      border-radius: 2px;
+    }
+    .legend-item {
+      margin-bottom: 3px;
+      clear: both;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="app-container">
+    <div id="map"></div>
+
+    <div id="sidebar">
+      <h2>Provide Feedback</h2>
+      <p id="instruction-text">Click anywhere on the map to place a feedback pin.</p>
+
+      <div id="form-container" style="display: none;">
+        <div class="comment-form">
+          <label>Location Coordinates:</label>
+          <div id="location-display" style="font-size: 12px; color: #555; margin-bottom: 8px;"></div>
+
+          <label for="comment-name">Your Name / Organization:</label>
+          <input type="text" id="comment-name" placeholder="e.g. Jane Doe" required />
+
+          <label for="comment-email">Email Address:</label>
+          <input type="email" id="comment-email" placeholder="e.g. jane.doe@example.com" required />
+
+          <label for="comment-text">Feedback / Comment:</label>
+          <textarea id="comment-text" rows="4" placeholder="What are your thoughts on this zoning location?" required></textarea>
+
+          <button class="btn-submit" onclick="submitDockedComment()">Submit Feedback</button>
+          <button class="btn-cancel" onclick="cancelPendingPin()">Cancel Pin</button>
+        </div>
+      </div>
+
+      <hr style="margin: 20px 0;">
+      <h3>Submitted Feedback</h3>
+      <div id="comments-list">
+        <em>Loading public feedback...</em>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Paste your Google Apps Script Web App URL here:
+    var GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzhXpJk6rY9LRRPCu4NzL-wbmyKLdIP5V0fJGrMmka6LGcyJdxoQa1JJmbXQMAgh0U/exec";
+
+    var map = L.map('map').setView([41.256429, -95.934085], 13);
+
+    // 1. Esri Public Satellite Imagery + Street Labels Hybrid Basemap
+    L.esri.basemapLayer('Imagery').addTo(map);
+    L.esri.basemapLayer('ImageryTransportation').addTo(map);
+
+    // --- 2. ADDRESS SEARCH CONTROL (OpenStreetMap / Nominatim) ---
+    const searchProvider = new GeoSearch.OpenStreetMapProvider({
+      params: {
+        viewbox: '-96.3300,41.1350,-95.8800,41.3600',
+        bounded: 1
+      }
+    });
+
+    const searchControl = new GeoSearch.GeoSearchControl({
+      provider: searchProvider,
+      style: 'bar',
+      showMarker: true,
+      showPopup: false,
+      autoClose: true,
+      retainZoomLevel: false,
+      animateZoom: true,
+      keepResult: true,
+      searchLabel: 'Search Douglas Co. address...'
+    });
+
+    map.addControl(searchControl);
+
+    // 3. FLUM Zoning Feature Layer
+    var zoningLayer = L.esri.featureLayer({
+      url: 'https://dcgis.org/server/rest/services/Hosted/FLUM_Zoning_Union/FeatureServer/0',
+      interactive: false,
+      style: function (feature) {
+        var rawCategory = feature.properties.category || feature.properties.Category || '';
+        var category = rawCategory.toString().trim().toLowerCase();
+
+        switch (category) {
+          case 'neighborhood': return { color: '#E8BEFF', fillColor: '#E8BEFF', fillOpacity: 0.6, weight: 1 };
+          case 'community': return { color: '#DF73FF', fillColor: '#DF73FF', fillOpacity: 0.6, weight: 1 };
+          case 'regional': return { color: '#C500FF', fillColor: '#C500FF', fillOpacity: 0.6, weight: 1 };
+          case 'downtown': return { color: '#8400A8', fillColor: '#8400A8', fillOpacity: 0.6, weight: 1 };
+          case 'neighborhood 1': return { color: '#FFF2B1', fillColor: '#FFF2B1', fillOpacity: 0.6, weight: 1 };
+          case 'neighborhood 2': return { color: '#FFD819', fillColor: '#FFD819', fillOpacity: 0.6, weight: 1 };
+          case 'neighborhood 3': return { color: '#D4A276', fillColor: '#D4A276', fillOpacity: 0.6, weight: 1 };
+          case 'neighborhood 4': return { color: '#5E3502', fillColor: '#5E3502', fillOpacity: 0.6, weight: 1 };
+          case 'airport': return { color: '#BEE8FF', fillColor: '#BEE8FF', fillOpacity: 0.6, weight: 1 };
+          case 'campus': return { color: '#0084A8', fillColor: '#0084A8', fillOpacity: 0.6, weight: 1 };
+          case 'infrastructure': return { color: '#162E93', fillColor: '#162E93', fillOpacity: 0.6, weight: 1 };
+          case 'traditional': return { color: '#F54949', fillColor: '#F54949', fillOpacity: 0.6, weight: 1 };
+          case 'mixed use': return { color: '#FF7F7F', fillColor: '#FF7F7F', fillOpacity: 0.6, weight: 1 };
+          case 'flex light industrial': return { color: '#828282', fillColor: '#828282', fillOpacity: 0.6, weight: 1 };
+          case 'industrial': return { color: '#4E4E4E', fillColor: '#4E4E4E', fillOpacity: 0.6, weight: 1 };
+          case 'park': return { color: '#4CE600', fillColor: '#4CE600', fillOpacity: 0.6, weight: 1 };
+          case 'trail oriented development': return { color: '#319400', fillColor: '#319400', fillOpacity: 0.6, weight: 1 };
+          case 'cunningham lake environmental overlay':
+          case 'elkhorn environmental overlay':
+          case 'ponca hills environmental overlay':
+            return { color: '#E0FCD7', fillColor: '#E0FCD7', fillOpacity: 0.4, weight: 1.5 };
+          default: return { color: '#bdc3c7', fillColor: '#bdc3c7', fillOpacity: 0.3, weight: 1 };
+        }
+      }
+    }).addTo(map);
+
+    // --- FLOATING DYNAMIC LEGEND ---
+    var legend = L.control({ position: 'bottomright' });
+
+    legend.onAdd = function (map) {
+      var div = L.DomUtil.create('div', 'legend');
+      div.innerHTML = '<h4>Zoning Categories</h4>';
+
+      var legendData = [
+        { header: 'Anchors' },
+        { label: 'Neighborhood Anchor', color: '#E8BEFF' },
+        { label: 'Community Anchor', color: '#DF73FF' },
+        { label: 'Regional Anchor', color: '#C500FF' },
+        { label: 'Downtown Anchor', color: '#8400A8' },
+
+        { header: 'Neighborhoods' },
+        { label: 'Neighborhood 1', color: '#FFF2B1' },
+        { label: 'Neighborhood 2', color: '#FFD819' },
+        { label: 'Neighborhood 3', color: '#D4A276' },
+        { label: 'Neighborhood 4', color: '#5E3502' },
+
+        { header: 'Special Use & Infrastructure' },
+        { label: 'Airport', color: '#BEE8FF' },
+        { label: 'Campus', color: '#0084A8' },
+        { label: 'Infrastructure', color: '#162E93' },
+
+        { header: 'Corridors & Development' },
+        { label: 'Traditional Corridor', color: '#F54949' },
+        { label: 'Mixed Use Corridor', color: '#FF7F7F' },
+        { label: 'Flex Light Industrial', color: '#828282' },
+        { label: 'Industrial', color: '#4E4E4E' },
+
+        { header: 'Parks & Environment' },
+        { label: 'Park and Open Space', color: '#4CE600' },
+        { label: 'Trail Oriented Development', color: '#319400' },
+        { label: 'Environmental Overlays', color: '#E0FCD7' }
+      ];
+
+      legendData.forEach(function(item) {
+        if (item.header) {
+          div.innerHTML += '<div class="legend-section-title">' + item.header + '</div>';
+        } else {
+          div.innerHTML += 
+            '<div class="legend-item">' +
+              '<i style="background:' + item.color + '"></i> ' + item.label +
+            '</div>';
+        }
+      });
+
+      return div;
+    };
+
+    legend.addTo(map);
+
+    // --- SIDEBAR & PUBLIC GOOGLE SHEETS LOGIC ---
+    var activeMarker = null;
+    var currentCoords = null;
+    var userComments = [];
+
+    // Fetch public comments from Google Sheets when the map loads
+    function loadPublicComments() {
+      if (GOOGLE_SCRIPT_URL.includes("YOUR_GOOGLE_SCRIPT_URL_HERE")) {
+        console.warn("Skipping load: Replace GOOGLE_SCRIPT_URL with your Apps Script Web App URL.");
+        renderCommentsList();
+        return;
+      }
+
+      fetch(GOOGLE_SCRIPT_URL)
+        .then(response => response.json())
+        .then(data => {
+          userComments = data;
+          
+          userComments.forEach(c => {
+            var marker = L.marker([c.lat, c.lng]).addTo(map);
+            marker.bindPopup(`<b>${c.name}</b><br>${c.text}`);
+            c.marker = marker;
+          });
+          
+          renderCommentsList();
+        })
+        .catch(err => {
+          console.error("Error loading public comments:", err);
+          renderCommentsList();
+        });
+    }
+
+    loadPublicComments();
+
+    map.on('click', function(e) {
+      currentCoords = e.latlng;
+
+      if (activeMarker) {
+        activeMarker.setLatLng(currentCoords);
+      } else {
+        activeMarker = L.marker(currentCoords).addTo(map);
+      }
+
+      document.getElementById('instruction-text').style.display = 'none';
+      document.getElementById('form-container').style.display = 'block';
+      document.getElementById('location-display').innerText = 
+        `Lat: ${currentCoords.lat.toFixed(5)}, Lng: ${currentCoords.lng.toFixed(5)}`;
+    });
+
+    window.cancelPendingPin = function() {
+      if (activeMarker) {
+        map.removeLayer(activeMarker);
+        activeMarker = null;
+      }
+      document.getElementById('form-container').style.display = 'none';
+      document.getElementById('instruction-text').style.display = 'block';
+    };
+
+    window.submitDockedComment = function() {
+      var name = document.getElementById('comment-name').value;
+      var email = document.getElementById('comment-email').value;
+      var text = document.getElementById('comment-text').value;
+
+      if (!name || !email || !text) {
+        alert("Please fill in your name, email, and comment.");
+        return;
+      }
+
+      var commentData = {
+        id: Date.now(),
+        name: name,
+        email: email,
+        text: text,
+        lat: currentCoords.lat,
+        lng: currentCoords.lng,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        likes: 0,
+        replies: []
+      };
+
+      // POST comment data to Google Sheet
+      if (!GOOGLE_SCRIPT_URL.includes("YOUR_GOOGLE_SCRIPT_URL_HERE")) {
+        fetch(GOOGLE_SCRIPT_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(commentData)
+        }).catch(err => console.error("Error posting to sheet:", err));
+      }
+
+      activeMarker.bindPopup(`<b>${commentData.name}</b><br>${commentData.text}`);
+      commentData.marker = activeMarker;
+      
+      userComments.push(commentData);
+      activeMarker = null;
+      renderCommentsList();
+
+      document.getElementById('comment-name').value = '';
+      document.getElementById('comment-email').value = '';
+      document.getElementById('comment-text').value = '';
+      document.getElementById('form-container').style.display = 'none';
+      document.getElementById('instruction-text').style.display = 'block';
+    };
+
+    window.likeSidebarComment = function(commentId) {
+      var comment = userComments.find(function(c) { return c.id == commentId; });
+      if (comment) {
+        comment.likes += 1;
+        renderCommentsList();
+      }
+    };
+
+    window.toggleReplyForm = function(commentId) {
+      var formDiv = document.getElementById('reply-form-' + commentId);
+      if (formDiv) {
+        formDiv.style.display = (formDiv.style.display === 'none') ? 'block' : 'none';
+      }
+    };
+
+    window.submitReply = function(commentId) {
+      var replyName = document.getElementById('reply-name-' + commentId).value;
+      var replyText = document.getElementById('reply-text-' + commentId).value;
+
+      if (!replyName || !replyText) {
+        alert("Please fill in both your name and reply text.");
+        return;
+      }
+
+      var comment = userComments.find(function(c) { return c.id == commentId; });
+      if (comment) {
+        comment.replies.push({
+          name: replyName,
+          text: replyText,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        });
+        renderCommentsList();
+      }
+    };
+
+    window.deleteSidebarComment = function(commentId) {
+      var index = userComments.findIndex(function(c) { return c.id == commentId; });
+      if (index !== -1) {
+        if (userComments[index].marker) {
+          map.removeLayer(userComments[index].marker);
+        }
+        userComments.splice(index, 1);
+        renderCommentsList();
+      }
+    };
+
+    function renderCommentsList() {
+      var list = document.getElementById('comments-list');
+      
+      if (userComments.length === 0) {
+        list.innerHTML = '<em>No comments submitted yet.</em>';
+        return;
+      }
+
+      userComments.sort(function(a, b) {
+        if (b.likes !== a.likes) {
+          return b.likes - a.likes;
+        }
+        return b.id - a.id;
+      });
+
+      list.innerHTML = '';
+      
+      userComments.forEach(function(c) {
+        var repliesHTML = '';
+        if (c.replies && c.replies.length > 0) {
+          repliesHTML += '<div class="reply-container">';
+          c.replies.forEach(function(r) {
+            repliesHTML += `
+              <div class="reply-card">
+                <strong>${r.name}</strong> <small>(${r.timestamp || ''})</small><br>
+                <span>${r.text}</span>
+              </div>
+            `;
+          });
+          repliesHTML += '</div>';
+        }
+
+        var cardHTML = `
+          <div class="comment-card" id="card-${c.id}">
+            <strong>${c.name}</strong> <small>(${c.timestamp || ''})</small><br>
+            <small style="color: #666;">${c.email}</small>
+            <span style="display: block; margin: 4px 0;">"${c.text}"</span>
+            
+            <div>
+              <button class="btn-like-card" onclick="likeSidebarComment(${c.id})">👍 Like (${c.likes || 0})</button>
+              <button class="btn-reply-toggle" onclick="toggleReplyForm(${c.id})">💬 Reply (${c.replies ? c.replies.length : 0})</button>
+              <button class="btn-delete-card" onclick="deleteSidebarComment(${c.id})">Delete</button>
+            </div>
+
+            <div class="reply-form" id="reply-form-${c.id}" style="display: none;">
+              <input type="text" id="reply-name-${c.id}" placeholder="Your Name" required />
+              <textarea id="reply-text-${c.id}" rows="2" placeholder="Write a reply..." required></textarea>
+              <button class="btn-submit" style="padding: 6px; font-size: 11px;" onclick="submitReply(${c.id})">Post Reply</button>
+            </div>
+
+            ${repliesHTML}
+          </div>
+        `;
+        
+        list.insertAdjacentHTML('beforeend', cardHTML);
+      });
+    }
+  </script>
+
+</body>
+</html>
