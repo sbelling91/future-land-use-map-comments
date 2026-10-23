@@ -293,7 +293,7 @@
 
     // 3. FLUM Zoning Feature Layer
     var zoningLayer = L.esri.featureLayer({
-      url: 'https://dcgis.org/server/rest/services/Hosted/FLUM_Zoning_Union/FeatureServer/0',
+      url: 'https://dcgis.org/server/rest/services/Hosted/FLUM_Build/FeatureServer/0',
       interactive: false,
       style: function (feature) {
         var rawCategory = feature.properties.category || feature.properties.Category || '';
