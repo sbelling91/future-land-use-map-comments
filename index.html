@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Douglas County FLUM Zoning Map - Shared Public Comments</title>
+  <title>Douglas County FLUM Map - Shared Public Comments</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <link rel="stylesheet" href="https://unpkg.com/leaflet-geosearch@3.11.0/dist/geosearch.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -281,7 +281,7 @@
             <option value="dislike">👎 Dislike (Red Pin)</option>
           </select>
           <label for="comment-text">Feedback / Comment:</label>
-          <textarea id="comment-text" rows="4" placeholder="What are your thoughts on this zoning location?" required></textarea>
+          <textarea id="comment-text" rows="4" placeholder="What are your thoughts on this future land use?" required></textarea>
           <button class="btn-submit" onclick="submitDockedComment()">Submit Feedback</button>
           <button class="btn-cancel" onclick="cancelPendingPin()">Cancel Pin</button>
         </div>
@@ -385,7 +385,7 @@
     });
     map.addControl(searchControl);
 
-    // 3. FLUM Zoning Feature Layer
+    // 3. FLUM Future Land Use Feature Layer
     var zoningLayer = L.esri.featureLayer({
       url: 'https://dcgis.org/server/rest/services/Hosted/FLUM_Build/FeatureServer/0',
       interactive: false,
@@ -428,7 +428,7 @@
       }
       L.DomEvent.disableClickPropagation(div);
 
-      div.innerHTML = '<h4 id="legend-toggle">Zoning Categories ▾</h4><div id="legend-body"></div>';
+      div.innerHTML = '<h4 id="legend-toggle">Future Land Use ▾</h4><div id="legend-body"></div>';
       var bodyDiv = div.querySelector('#legend-body');
 
       var legendData = [
