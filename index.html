@@ -106,6 +106,11 @@
       color: #2e7d32;
       border: 1px solid #a5d6a7;
     }
+    .sentiment-neutral {
+      background-color: #e3f2fd;
+      color: #1565c0;
+      border: 1px solid #90caf9;
+    }
     .sentiment-dislike {
       background-color: #ffebee;
       color: #c62828;
@@ -278,6 +283,7 @@
           <label for="comment-sentiment">Feedback Type (Pin Color):</label>
           <select id="comment-sentiment" onchange="updatePendingPinIcon()" required>
             <option value="like">👍 Like (Green Pin)</option>
+            <option value="neutral">😐 Neutral (Blue Pin)</option>
             <option value="dislike">👎 Dislike (Red Pin)</option>
           </select>
           <label for="comment-text">Feedback / Comment:</label>
@@ -296,9 +302,18 @@
   <script>
     var GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzhXpJk6rY9LRRPCu4NzL-wbmyKLdIP5V0fJGrMmka6LGcyJdxoQa1JJmbXQMAgh0U/exec";
 
-    // --- CUSTOM GREEN & RED MAP PINS ---
+    // --- CUSTOM GREEN, BLUE & RED MAP PINS ---
     var greenPinIcon = new L.Icon({
       iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41]
+    });
+
+    var bluePinIcon = new L.Icon({
+      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
       shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
       iconSize: [25, 41],
       iconAnchor: [12, 41],
@@ -316,7 +331,17 @@
     });
 
     function getPinIcon(sentiment) {
-      return (sentiment && sentiment.toLowerCase() === 'dislike') ? redPinIcon : greenPinIcon;
+      var val = sentiment ? sentiment.toLowerCase() : 'like';
+      if (val === 'dislike') return redPinIcon;
+      if (val === 'neutral') return bluePinIcon;
+      return greenPinIcon;
+    }
+
+    function getSentimentLabel(sentiment) {
+      var val = sentiment ? sentiment.toLowerCase() : 'like';
+      if (val === 'dislike') return '👎 Dislike';
+      if (val === 'neutral') return '😐 Neutral';
+      return '👍 Like';
     }
 
     // --- PROFANITY FILTER ---
@@ -493,7 +518,7 @@
           userComments = data;
           userComments.forEach(c => {
             var marker = L.marker([c.lat, c.lng], { icon: getPinIcon(c.sentiment) }).addTo(map);
-            var sentimentLabel = (c.sentiment && c.sentiment.toLowerCase() === 'dislike') ? '👎 Dislike' : '👍 Like';
+            var sentimentLabel = getSentimentLabel(c.sentiment);
             marker.bindPopup(`<b>${censorText(c.name)}</b> (${sentimentLabel})<br>${censorText(c.text)}`, { maxWidth: 240 });
             c.marker = marker;
           });
@@ -523,181 +548,3 @@
         activeMarker = L.marker(currentCoords, { icon: getPinIcon(selectedSentiment) }).addTo(map);
       }
       document.getElementById('instruction-text').style.display = 'none';
-      document.getElementById('form-container').style.display = 'block';
-      document.getElementById('location-display').innerText = 
-        `Lat: ${currentCoords.lat.toFixed(5)}, Lng: ${currentCoords.lng.toFixed(5)}`;
-
-      if (window.innerWidth <= 768) {
-        document.getElementById('sidebar').scrollIntoView({ behavior: 'smooth' });
-      }
-    });
-
-    window.cancelPendingPin = function() {
-      if (activeMarker) {
-        map.removeLayer(activeMarker);
-        activeMarker = null;
-      }
-      document.getElementById('comment-sentiment').value = 'like';
-      document.getElementById('form-container').style.display = 'none';
-      document.getElementById('instruction-text').style.display = 'block';
-    };
-
-    window.submitDockedComment = function() {
-      var name = document.getElementById('comment-name').value;
-      var email = document.getElementById('comment-email').value;
-      var sentiment = document.getElementById('comment-sentiment').value;
-      var text = document.getElementById('comment-text').value;
-      if (!name || !email || !text) {
-        alert("Please fill in your name, email, and comment.");
-        return;
-      }
-
-      // Block submission if profanity is detected
-      if (containsProfanity(name) || containsProfanity(text)) {
-        alert("Please remove inappropriate or offensive language before submitting your public feedback.");
-        return;
-      }
-
-      var commentData = {
-        id: Date.now(),
-        name: name,
-        email: email,
-        sentiment: sentiment,
-        text: text,
-        lat: currentCoords.lat,
-        lng: currentCoords.lng,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        likes: 0,
-        replies: []
-      };
-
-      if (!GOOGLE_SCRIPT_URL.includes("YOUR_GOOGLE_SCRIPT_URL_HERE")) {
-        fetch(GOOGLE_SCRIPT_URL, {
-          method: "POST",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify(commentData)
-        }).catch(err => console.error("Error posting to sheet:", err));
-      }
-
-      var sentimentLabel = (sentiment === 'dislike') ? '👎 Dislike' : '👍 Like';
-      activeMarker.setIcon(getPinIcon(sentiment));
-      activeMarker.bindPopup(`<b>${commentData.name}</b> (${sentimentLabel})<br>${commentData.text}`, { maxWidth: 240 });
-      commentData.marker = activeMarker;
-      userComments.push(commentData);
-      activeMarker = null;
-      renderCommentsList();
-
-      document.getElementById('comment-name').value = '';
-      document.getElementById('comment-email').value = '';
-      document.getElementById('comment-sentiment').value = 'like';
-      document.getElementById('comment-text').value = '';
-      document.getElementById('form-container').style.display = 'none';
-      document.getElementById('instruction-text').style.display = 'block';
-    };
-
-    window.likeSidebarComment = function(commentId) {
-      var comment = userComments.find(function(c) { return c.id == commentId; });
-      if (comment) {
-        comment.likes += 1;
-        renderCommentsList();
-      }
-    };
-
-    window.toggleReplyForm = function(commentId) {
-      var formDiv = document.getElementById('reply-form-' + commentId);
-      if (formDiv) {
-        formDiv.style.display = (formDiv.style.display === 'none') ? 'block' : 'none';
-      }
-    };
-
-    window.submitReply = function(commentId) {
-      var replyName = document.getElementById('reply-name-' + commentId).value;
-      var replyText = document.getElementById('reply-text-' + commentId).value;
-      if (!replyName || !replyText) {
-        alert("Please fill in both your name and reply text.");
-        return;
-      }
-
-      // Block reply if profanity is detected
-      if (containsProfanity(replyName) || containsProfanity(replyText)) {
-        alert("Please remove inappropriate or offensive language before posting your reply.");
-        return;
-      }
-
-      var comment = userComments.find(function(c) { return c.id == commentId; });
-      if (comment) {
-        comment.replies.push({
-          name: replyName,
-          text: replyText,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        });
-        renderCommentsList();
-      }
-    };
-
-    window.deleteSidebarComment = function(commentId) {
-      var index = userComments.findIndex(function(c) { return c.id == commentId; });
-      if (index !== -1) {
-        if (userComments[index].marker) {
-          map.removeLayer(userComments[index].marker);
-        }
-        userComments.splice(index, 1);
-        renderCommentsList();
-      }
-    };
-
-    function renderCommentsList() {
-      var list = document.getElementById('comments-list');
-      if (userComments.length === 0) {
-        list.innerHTML = '<em>No comments submitted yet.</em>';
-        return;
-      }
-      userComments.sort(function(a, b) {
-        if (b.likes !== a.likes) {
-          return b.likes - a.likes;
-        }
-        return b.id - a.id;
-      });
-      list.innerHTML = '';
-      userComments.forEach(function(c) {
-        var repliesHTML = '';
-        if (c.replies && c.replies.length > 0) {
-          repliesHTML += '<div class="reply-container">';
-          c.replies.forEach(function(r) {
-            repliesHTML += `
-              <div class="reply-card">
-                <strong>${censorText(r.name)}</strong> <small>(${r.timestamp || ''})</small><br>
-                <span>${censorText(r.text)}</span>
-              </div>
-            `;
-          });
-          repliesHTML += '</div>';
-        }
-        var isDislike = (c.sentiment && c.sentiment.toLowerCase() === 'dislike');
-        var badgeHTML = isDislike
-          ? '<span class="sentiment-badge sentiment-dislike">👎 Dislike</span>'
-          : '<span class="sentiment-badge sentiment-like">👍 Like</span>';
-
-        var cardHTML = `
-          <div class="comment-card" id="card-${c.id}">
-            <strong>${censorText(c.name)}</strong> ${badgeHTML} <small>(${c.timestamp || ''})</small><br>
-            <span style="display: block; margin: 4px 0;">"${censorText(c.text)}"</span>
-            <div>
-              <button class="btn-like-card" onclick="likeSidebarComment(${c.id})">👍 Like (${c.likes || 0})</button>
-              <button class="btn-reply-toggle" onclick="toggleReplyForm(${c.id})">💬 Reply (${c.replies ? c.replies.length : 0})</button>
-              <button class="btn-delete-card" onclick="deleteSidebarComment(${c.id})">Delete</button>
-            </div>
-            <div class="reply-form" id="reply-form-${c.id}" style="display: none;">
-              <input type="text" id="reply-name-${c.id}" placeholder="Your Name" required />
-              <textarea id="reply-text-${c.id}" rows="2" placeholder="Write a reply..." required></textarea>
-              <button class="btn-submit" style="padding: 6px; font-size: 12px;" onclick="submitReply(${c.id})">Post Reply</button>
-            </div>
-            ${repliesHTML}
-          </div>
-        `;
-        list.insertAdjacentHTML('beforeend', cardHTML);
-      });
-    }
-  </script>
-</body>
-</html>
