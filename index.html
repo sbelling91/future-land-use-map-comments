@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <!-- 1. ADDED: Essential Mobile Viewport Tag -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Douglas County FLUM Zoning Map - Shared Public Comments</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -53,7 +52,7 @@
       box-sizing: border-box;
       border: 1px solid #ccc;
       border-radius: 4px;
-      font-size: 16px; /* Prevents iOS auto-zoom */
+      font-size: 16px;
     }
     .comment-form label {
       font-size: 13px;
@@ -153,7 +152,7 @@
     }
     .reply-form input,
     .reply-form textarea {
-      font-size: 16px; /* Prevents iOS auto-zoom */
+      font-size: 16px;
       margin-bottom: 6px;
       padding: 6px;
       width: 100%;
@@ -201,7 +200,7 @@
       clear: both;
     }
 
-    /* 2. ADDED: Mobile Responsive Layout */
+    /* Mobile Responsive Layout */
     @media (max-width: 768px) {
       #app-container {
         flex-direction: column;
@@ -227,7 +226,6 @@
         max-height: 180px;
         padding: 8px 10px;
       }
-      /* Collapse legend body by default on small screens */
       .legend.collapsed #legend-body {
         display: none;
       }
@@ -254,7 +252,7 @@
           <div id="location-display" style="font-size: 12px; color: #555; margin-bottom: 8px;"></div>
           <label for="comment-name">Your Name / Organization:</label>
           <input type="text" id="comment-name" placeholder="e.g. Jane Doe" required />
-          <label for="comment-email">Email Address:</label>
+          <label for="comment-email">Email Address (kept private):</label>
           <input type="email" id="comment-email" placeholder="e.g. jane.doe@example.com" required />
           <label for="comment-text">Feedback / Comment:</label>
           <textarea id="comment-text" rows="4" placeholder="What are your thoughts on this zoning location?" required></textarea>
@@ -335,11 +333,9 @@
     var legend = L.control({ position: 'bottomright' });
     legend.onAdd = function (map) {
       var div = L.DomUtil.create('div', 'legend');
-      // Start collapsed on mobile screens
       if (window.innerWidth <= 768) {
         div.classList.add('collapsed');
       }
-      // Prevent map clicks when tapping legend
       L.DomEvent.disableClickPropagation(div);
 
       div.innerHTML = '<h4 id="legend-toggle">Zoning Categories ▾</h4><div id="legend-body"></div>';
@@ -431,7 +427,6 @@
       document.getElementById('location-display').innerText = 
         `Lat: ${currentCoords.lat.toFixed(5)}, Lng: ${currentCoords.lng.toFixed(5)}`;
 
-      // 3. ADDED: Automatically scroll down to the form on mobile screens
       if (window.innerWidth <= 768) {
         document.getElementById('sidebar').scrollIntoView({ behavior: 'smooth' });
       }
@@ -561,7 +556,6 @@
         var cardHTML = `
           <div class="comment-card" id="card-${c.id}">
             <strong>${c.name}</strong> <small>(${c.timestamp || ''})</small><br>
-            <small style="color: #666;">${c.email}</small>
             <span style="display: block; margin: 4px 0;">"${c.text}"</span>
             <div>
               <button class="btn-like-card" onclick="likeSidebarComment(${c.id})">👍 Like (${c.likes || 0})</button>
