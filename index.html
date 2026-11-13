@@ -45,7 +45,8 @@
       box-shadow: -2px 0 10px rgba(0,0,0,0.1);
     }
     .comment-form input, 
-    .comment-form textarea {
+    .comment-form textarea,
+    .comment-form select {
       width: 100%;
       margin: 4px 0 10px 0;
       padding: 8px;
@@ -53,6 +54,7 @@
       border: 1px solid #ccc;
       border-radius: 4px;
       font-size: 16px;
+      background-color: white;
     }
     .comment-form label {
       font-size: 13px;
@@ -89,6 +91,25 @@
       padding: 10px;
       margin-top: 10px;
       position: relative;
+    }
+    .sentiment-badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 11px;
+      font-weight: bold;
+      margin-left: 4px;
+      vertical-align: middle;
+    }
+    .sentiment-like {
+      background-color: #e8f5e9;
+      color: #2e7d32;
+      border: 1px solid #a5d6a7;
+    }
+    .sentiment-dislike {
+      background-color: #ffebee;
+      color: #c62828;
+      border: 1px solid #ef9a9a;
     }
     .btn-like-card {
       background-color: #2e7d32;
@@ -234,7 +255,7 @@
         border-bottom: none;
         padding-bottom: 0;
       }
-      .btn-submit, .btn-cancel, .btn-like-card, .btn-reply-toggle, .btn-delete-card {
+      .btn-submit, .btn-cancel, .btn-like-card, .btn-reply-toggle, .btn-delete-card, .comment-form select {
         min-height: 40px;
       }
     }
@@ -254,6 +275,11 @@
           <input type="text" id="comment-name" placeholder="e.g. Jane Doe" required />
           <label for="comment-email">Email Address (kept private):</label>
           <input type="email" id="comment-email" placeholder="e.g. jane.doe@example.com" required />
+          <label for="comment-sentiment">Feedback Type (Pin Color):</label>
+          <select id="comment-sentiment" onchange="updatePendingPinIcon()" required>
+            <option value="like">👍 Like (Green Pin)</option>
+            <option value="dislike">👎 Dislike (Red Pin)</option>
+          </select>
           <label for="comment-text">Feedback / Comment:</label>
           <textarea id="comment-text" rows="4" placeholder="What are your thoughts on this zoning location?" required></textarea>
           <button class="btn-submit" onclick="submitDockedComment()">Submit Feedback</button>
@@ -270,8 +296,30 @@
   <script>
     var GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzhXpJk6rY9LRRPCu4NzL-wbmyKLdIP5V0fJGrMmka6LGcyJdxoQa1JJmbXQMAgh0U/exec";
 
+    // --- CUSTOM GREEN & RED MAP PINS ---
+    var greenPinIcon = new L.Icon({
+      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41]
+    });
+
+    var redPinIcon = new L.Icon({
+      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41]
+    });
+
+    function getPinIcon(sentiment) {
+      return (sentiment && sentiment.toLowerCase() === 'dislike') ? redPinIcon : greenPinIcon;
+    }
+
     // --- PROFANITY FILTER ---
-    // Add or remove words in lowercase inside this list as needed
     const BLOCKED_WORDS = [
       "ass", "asshole", "bastard", "bitch", "bitches", "bullshit", "cock",
       "crap", "cunt", "damn", "dick", "douche", "douchebag", "fag", "faggot",
@@ -280,7 +328,6 @@
       "retard", "retarded", "shit", "shitty", "slut", "whore"
     ];
 
-    // Normalize common leetspeak/symbol substitutions (e.g., f*ck, sh1t, @ss)
     function normalizeText(str) {
       return str
         .toLowerCase()
@@ -293,7 +340,6 @@
         .replace(/[*#_.-]/g, "");
     }
 
-    // Returns true if text contains any blocked word
     function containsProfanity(text) {
       if (!text) return false;
       const cleaned = normalizeText(text);
@@ -303,7 +349,6 @@
       });
     }
 
-    // Replaces blocked words with asterisks when rendering existing comments
     function censorText(text) {
       if (!text) return "";
       let censored = text;
@@ -447,8 +492,9 @@
         .then(data => {
           userComments = data;
           userComments.forEach(c => {
-            var marker = L.marker([c.lat, c.lng]).addTo(map);
-            marker.bindPopup(`<b>${censorText(c.name)}</b><br>${censorText(c.text)}`, { maxWidth: 240 });
+            var marker = L.marker([c.lat, c.lng], { icon: getPinIcon(c.sentiment) }).addTo(map);
+            var sentimentLabel = (c.sentiment && c.sentiment.toLowerCase() === 'dislike') ? '👎 Dislike' : '👍 Like';
+            marker.bindPopup(`<b>${censorText(c.name)}</b> (${sentimentLabel})<br>${censorText(c.text)}`, { maxWidth: 240 });
             c.marker = marker;
           });
           renderCommentsList();
@@ -460,12 +506,21 @@
     }
     loadPublicComments();
 
+    window.updatePendingPinIcon = function() {
+      if (activeMarker) {
+        var selectedSentiment = document.getElementById('comment-sentiment').value;
+        activeMarker.setIcon(getPinIcon(selectedSentiment));
+      }
+    };
+
     map.on('click', function(e) {
       currentCoords = e.latlng;
+      var selectedSentiment = document.getElementById('comment-sentiment').value;
       if (activeMarker) {
         activeMarker.setLatLng(currentCoords);
+        activeMarker.setIcon(getPinIcon(selectedSentiment));
       } else {
-        activeMarker = L.marker(currentCoords).addTo(map);
+        activeMarker = L.marker(currentCoords, { icon: getPinIcon(selectedSentiment) }).addTo(map);
       }
       document.getElementById('instruction-text').style.display = 'none';
       document.getElementById('form-container').style.display = 'block';
@@ -482,6 +537,7 @@
         map.removeLayer(activeMarker);
         activeMarker = null;
       }
+      document.getElementById('comment-sentiment').value = 'like';
       document.getElementById('form-container').style.display = 'none';
       document.getElementById('instruction-text').style.display = 'block';
     };
@@ -489,6 +545,7 @@
     window.submitDockedComment = function() {
       var name = document.getElementById('comment-name').value;
       var email = document.getElementById('comment-email').value;
+      var sentiment = document.getElementById('comment-sentiment').value;
       var text = document.getElementById('comment-text').value;
       if (!name || !email || !text) {
         alert("Please fill in your name, email, and comment.");
@@ -505,6 +562,7 @@
         id: Date.now(),
         name: name,
         email: email,
+        sentiment: sentiment,
         text: text,
         lat: currentCoords.lat,
         lng: currentCoords.lng,
@@ -521,7 +579,9 @@
         }).catch(err => console.error("Error posting to sheet:", err));
       }
 
-      activeMarker.bindPopup(`<b>${commentData.name}</b><br>${commentData.text}`, { maxWidth: 240 });
+      var sentimentLabel = (sentiment === 'dislike') ? '👎 Dislike' : '👍 Like';
+      activeMarker.setIcon(getPinIcon(sentiment));
+      activeMarker.bindPopup(`<b>${commentData.name}</b> (${sentimentLabel})<br>${commentData.text}`, { maxWidth: 240 });
       commentData.marker = activeMarker;
       userComments.push(commentData);
       activeMarker = null;
@@ -529,6 +589,7 @@
 
       document.getElementById('comment-name').value = '';
       document.getElementById('comment-email').value = '';
+      document.getElementById('comment-sentiment').value = 'like';
       document.getElementById('comment-text').value = '';
       document.getElementById('form-container').style.display = 'none';
       document.getElementById('instruction-text').style.display = 'block';
@@ -612,9 +673,14 @@
           });
           repliesHTML += '</div>';
         }
+        var isDislike = (c.sentiment && c.sentiment.toLowerCase() === 'dislike');
+        var badgeHTML = isDislike
+          ? '<span class="sentiment-badge sentiment-dislike">👎 Dislike</span>'
+          : '<span class="sentiment-badge sentiment-like">👍 Like</span>';
+
         var cardHTML = `
           <div class="comment-card" id="card-${c.id}">
-            <strong>${censorText(c.name)}</strong> <small>(${c.timestamp || ''})</small><br>
+            <strong>${censorText(c.name)}</strong> ${badgeHTML} <small>(${c.timestamp || ''})</small><br>
             <span style="display: block; margin: 4px 0;">"${censorText(c.text)}"</span>
             <div>
               <button class="btn-like-card" onclick="likeSidebarComment(${c.id})">👍 Like (${c.likes || 0})</button>
