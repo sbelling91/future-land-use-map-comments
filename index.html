@@ -269,6 +269,51 @@
   </div>
   <script>
     var GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzhXpJk6rY9LRRPCu4NzL-wbmyKLdIP5V0fJGrMmka6LGcyJdxoQa1JJmbXQMAgh0U/exec";
+
+    // --- PROFANITY FILTER ---
+    // Add or remove words in lowercase inside this list as needed
+    const BLOCKED_WORDS = [
+      "ass", "asshole", "bastard", "bitch", "bitches", "bullshit", "cock",
+      "crap", "cunt", "damn", "dick", "douche", "douchebag", "fag", "faggot",
+      "fuck", "fucked", "fucker", "fucking", "goddamn", "hell", "horseshit",
+      "jackass", "motherfucker", "nigger", "nigga", "piss", "prick", "pussy",
+      "retard", "retarded", "shit", "shitty", "slut", "whore"
+    ];
+
+    // Normalize common leetspeak/symbol substitutions (e.g., f*ck, sh1t, @ss)
+    function normalizeText(str) {
+      return str
+        .toLowerCase()
+        .replace(/[@4]/g, "a")
+        .replace(/[3]/g, "e")
+        .replace(/[1!|]/g, "i")
+        .replace(/[0]/g, "o")
+        .replace(/[$5]/g, "s")
+        .replace(/[7+]/g, "t")
+        .replace(/[*#_.-]/g, "");
+    }
+
+    // Returns true if text contains any blocked word
+    function containsProfanity(text) {
+      if (!text) return false;
+      const cleaned = normalizeText(text);
+      return BLOCKED_WORDS.some(word => {
+        const regex = new RegExp("\\b" + word + "\\b", "i");
+        return regex.test(cleaned);
+      });
+    }
+
+    // Replaces blocked words with asterisks when rendering existing comments
+    function censorText(text) {
+      if (!text) return "";
+      let censored = text;
+      BLOCKED_WORDS.forEach(word => {
+        const regex = new RegExp("\\b" + word + "\\b", "gi");
+        censored = censored.replace(regex, match => "*".repeat(match.length));
+      });
+      return censored;
+    }
+
     var map = L.map('map').setView([41.256429, -95.934085], 13);
 
     // 1. Esri Public Satellite Imagery + Street Labels Hybrid Basemap
@@ -403,7 +448,7 @@
           userComments = data;
           userComments.forEach(c => {
             var marker = L.marker([c.lat, c.lng]).addTo(map);
-            marker.bindPopup(`<b>${c.name}</b><br>${c.text}`, { maxWidth: 240 });
+            marker.bindPopup(`<b>${censorText(c.name)}</b><br>${censorText(c.text)}`, { maxWidth: 240 });
             c.marker = marker;
           });
           renderCommentsList();
@@ -449,6 +494,13 @@
         alert("Please fill in your name, email, and comment.");
         return;
       }
+
+      // Block submission if profanity is detected
+      if (containsProfanity(name) || containsProfanity(text)) {
+        alert("Please remove inappropriate or offensive language before submitting your public feedback.");
+        return;
+      }
+
       var commentData = {
         id: Date.now(),
         name: name,
@@ -504,6 +556,13 @@
         alert("Please fill in both your name and reply text.");
         return;
       }
+
+      // Block reply if profanity is detected
+      if (containsProfanity(replyName) || containsProfanity(replyText)) {
+        alert("Please remove inappropriate or offensive language before posting your reply.");
+        return;
+      }
+
       var comment = userComments.find(function(c) { return c.id == commentId; });
       if (comment) {
         comment.replies.push({
@@ -546,8 +605,8 @@
           c.replies.forEach(function(r) {
             repliesHTML += `
               <div class="reply-card">
-                <strong>${r.name}</strong> <small>(${r.timestamp || ''})</small><br>
-                <span>${r.text}</span>
+                <strong>${censorText(r.name)}</strong> <small>(${r.timestamp || ''})</small><br>
+                <span>${censorText(r.text)}</span>
               </div>
             `;
           });
@@ -555,8 +614,8 @@
         }
         var cardHTML = `
           <div class="comment-card" id="card-${c.id}">
-            <strong>${c.name}</strong> <small>(${c.timestamp || ''})</small><br>
-            <span style="display: block; margin: 4px 0;">"${c.text}"</span>
+            <strong>${censorText(c.name)}</strong> <small>(${c.timestamp || ''})</small><br>
+            <span style="display: block; margin: 4px 0;">"${censorText(c.text)}"</span>
             <div>
               <button class="btn-like-card" onclick="likeSidebarComment(${c.id})">👍 Like (${c.likes || 0})</button>
               <button class="btn-reply-toggle" onclick="toggleReplyForm(${c.id})">💬 Reply (${c.replies ? c.replies.length : 0})</button>
