@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Douglas County FLUM Zoning Map - Shared Public Comments</title>
+  <title>Douglas County FLUM Map - Shared Public Comments</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <link rel="stylesheet" href="https://unpkg.com/leaflet-geosearch@3.11.0/dist/geosearch.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -45,7 +45,8 @@
       box-shadow: -2px 0 10px rgba(0,0,0,0.1);
     }
     .comment-form input, 
-    .comment-form textarea {
+    .comment-form textarea,
+    .comment-form select {
       width: 100%;
       margin: 4px 0 10px 0;
       padding: 8px;
@@ -53,6 +54,7 @@
       border: 1px solid #ccc;
       border-radius: 4px;
       font-size: 16px;
+      background-color: white;
     }
     .comment-form label {
       font-size: 13px;
@@ -89,6 +91,30 @@
       padding: 10px;
       margin-top: 10px;
       position: relative;
+    }
+    .sentiment-badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 11px;
+      font-weight: bold;
+      margin-left: 4px;
+      vertical-align: middle;
+    }
+    .sentiment-like {
+      background-color: #e8f5e9;
+      color: #2e7d32;
+      border: 1px solid #a5d6a7;
+    }
+    .sentiment-neutral {
+      background-color: #e3f2fd;
+      color: #1565c0;
+      border: 1px solid #90caf9;
+    }
+    .sentiment-dislike {
+      background-color: #ffebee;
+      color: #c62828;
+      border: 1px solid #ef9a9a;
     }
     .btn-like-card {
       background-color: #2e7d32;
@@ -234,7 +260,7 @@
         border-bottom: none;
         padding-bottom: 0;
       }
-      .btn-submit, .btn-cancel, .btn-like-card, .btn-reply-toggle, .btn-delete-card {
+      .btn-submit, .btn-cancel, .btn-like-card, .btn-reply-toggle, .btn-delete-card, .comment-form select {
         min-height: 40px;
       }
     }
@@ -254,8 +280,14 @@
           <input type="text" id="comment-name" placeholder="e.g. Jane Doe" required />
           <label for="comment-email">Email Address (kept private):</label>
           <input type="email" id="comment-email" placeholder="e.g. jane.doe@example.com" required />
+          <label for="comment-sentiment">Feedback Type (Pin Color):</label>
+          <select id="comment-sentiment" onchange="updatePendingPinIcon()" required>
+            <option value="like">👍 Like (Green Pin)</option>
+            <option value="neutral">😐 Neutral (Blue Pin)</option>
+            <option value="dislike">👎 Dislike (Red Pin)</option>
+          </select>
           <label for="comment-text">Feedback / Comment:</label>
-          <textarea id="comment-text" rows="4" placeholder="What are your thoughts on this zoning location?" required></textarea>
+          <textarea id="comment-text" rows="4" placeholder="What are your thoughts on this future land use?" required></textarea>
           <button class="btn-submit" onclick="submitDockedComment()">Submit Feedback</button>
           <button class="btn-cancel" onclick="cancelPendingPin()">Cancel Pin</button>
         </div>
@@ -270,8 +302,49 @@
   <script>
     var GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzhXpJk6rY9LRRPCu4NzL-wbmyKLdIP5V0fJGrMmka6LGcyJdxoQa1JJmbXQMAgh0U/exec";
 
+    // --- CUSTOM GREEN, BLUE & RED MAP PINS ---
+    var greenPinIcon = new L.Icon({
+      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41]
+    });
+
+    var bluePinIcon = new L.Icon({
+      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41]
+    });
+
+    var redPinIcon = new L.Icon({
+      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41]
+    });
+
+    function getPinIcon(sentiment) {
+      var val = sentiment ? sentiment.toLowerCase() : 'like';
+      if (val === 'dislike') return redPinIcon;
+      if (val === 'neutral') return bluePinIcon;
+      return greenPinIcon;
+    }
+
+    function getSentimentLabel(sentiment) {
+      var val = sentiment ? sentiment.toLowerCase() : 'like';
+      if (val === 'dislike') return '👎 Dislike';
+      if (val === 'neutral') return '😐 Neutral';
+      return '👍 Like';
+    }
+
     // --- PROFANITY FILTER ---
-    // Add or remove words in lowercase inside this list as needed
     const BLOCKED_WORDS = [
       "ass", "asshole", "bastard", "bitch", "bitches", "bullshit", "cock",
       "crap", "cunt", "damn", "dick", "douche", "douchebag", "fag", "faggot",
@@ -280,7 +353,6 @@
       "retard", "retarded", "shit", "shitty", "slut", "whore"
     ];
 
-    // Normalize common leetspeak/symbol substitutions (e.g., f*ck, sh1t, @ss)
     function normalizeText(str) {
       return str
         .toLowerCase()
@@ -293,7 +365,6 @@
         .replace(/[*#_.-]/g, "");
     }
 
-    // Returns true if text contains any blocked word
     function containsProfanity(text) {
       if (!text) return false;
       const cleaned = normalizeText(text);
@@ -303,7 +374,6 @@
       });
     }
 
-    // Replaces blocked words with asterisks when rendering existing comments
     function censorText(text) {
       if (!text) return "";
       let censored = text;
@@ -340,7 +410,7 @@
     });
     map.addControl(searchControl);
 
-    // 3. FLUM Zoning Feature Layer
+    // 3. FLUM Future Land Use Feature Layer
     var zoningLayer = L.esri.featureLayer({
       url: 'https://dcgis.org/server/rest/services/Hosted/FLUM_Build/FeatureServer/0',
       interactive: false,
@@ -383,7 +453,7 @@
       }
       L.DomEvent.disableClickPropagation(div);
 
-      div.innerHTML = '<h4 id="legend-toggle">Zoning Categories ▾</h4><div id="legend-body"></div>';
+      div.innerHTML = '<h4 id="legend-toggle">Future Land Use ▾</h4><div id="legend-body"></div>';
       var bodyDiv = div.querySelector('#legend-body');
 
       var legendData = [
@@ -447,8 +517,9 @@
         .then(data => {
           userComments = data;
           userComments.forEach(c => {
-            var marker = L.marker([c.lat, c.lng]).addTo(map);
-            marker.bindPopup(`<b>${censorText(c.name)}</b><br>${censorText(c.text)}`, { maxWidth: 240 });
+            var marker = L.marker([c.lat, c.lng], { icon: getPinIcon(c.sentiment) }).addTo(map);
+            var sentimentLabel = getSentimentLabel(c.sentiment);
+            marker.bindPopup(`<b>${censorText(c.name)}</b> (${sentimentLabel})<br>${censorText(c.text)}`, { maxWidth: 240 });
             c.marker = marker;
           });
           renderCommentsList();
@@ -460,12 +531,21 @@
     }
     loadPublicComments();
 
+    window.updatePendingPinIcon = function() {
+      if (activeMarker) {
+        var selectedSentiment = document.getElementById('comment-sentiment').value;
+        activeMarker.setIcon(getPinIcon(selectedSentiment));
+      }
+    };
+
     map.on('click', function(e) {
       currentCoords = e.latlng;
+      var selectedSentiment = document.getElementById('comment-sentiment').value;
       if (activeMarker) {
         activeMarker.setLatLng(currentCoords);
+        activeMarker.setIcon(getPinIcon(selectedSentiment));
       } else {
-        activeMarker = L.marker(currentCoords).addTo(map);
+        activeMarker = L.marker(currentCoords, { icon: getPinIcon(selectedSentiment) }).addTo(map);
       }
       document.getElementById('instruction-text').style.display = 'none';
       document.getElementById('form-container').style.display = 'block';
@@ -482,6 +562,7 @@
         map.removeLayer(activeMarker);
         activeMarker = null;
       }
+      document.getElementById('comment-sentiment').value = 'like';
       document.getElementById('form-container').style.display = 'none';
       document.getElementById('instruction-text').style.display = 'block';
     };
@@ -489,6 +570,7 @@
     window.submitDockedComment = function() {
       var name = document.getElementById('comment-name').value;
       var email = document.getElementById('comment-email').value;
+      var sentiment = document.getElementById('comment-sentiment').value;
       var text = document.getElementById('comment-text').value;
       if (!name || !email || !text) {
         alert("Please fill in your name, email, and comment.");
@@ -505,6 +587,7 @@
         id: Date.now(),
         name: name,
         email: email,
+        sentiment: sentiment,
         text: text,
         lat: currentCoords.lat,
         lng: currentCoords.lng,
@@ -521,7 +604,9 @@
         }).catch(err => console.error("Error posting to sheet:", err));
       }
 
-      activeMarker.bindPopup(`<b>${commentData.name}</b><br>${commentData.text}`, { maxWidth: 240 });
+      var sentimentLabel = getSentimentLabel(sentiment);
+      activeMarker.setIcon(getPinIcon(sentiment));
+      activeMarker.bindPopup(`<b>${commentData.name}</b> (${sentimentLabel})<br>${commentData.text}`, { maxWidth: 240 });
       commentData.marker = activeMarker;
       userComments.push(commentData);
       activeMarker = null;
@@ -529,6 +614,7 @@
 
       document.getElementById('comment-name').value = '';
       document.getElementById('comment-email').value = '';
+      document.getElementById('comment-sentiment').value = 'like';
       document.getElementById('comment-text').value = '';
       document.getElementById('form-container').style.display = 'none';
       document.getElementById('instruction-text').style.display = 'block';
@@ -612,9 +698,17 @@
           });
           repliesHTML += '</div>';
         }
+        var val = c.sentiment ? c.sentiment.toLowerCase() : 'like';
+        var badgeHTML = '<span class="sentiment-badge sentiment-like">👍 Like</span>';
+        if (val === 'dislike') {
+          badgeHTML = '<span class="sentiment-badge sentiment-dislike">👎 Dislike</span>';
+        } else if (val === 'neutral') {
+          badgeHTML = '<span class="sentiment-badge sentiment-neutral">😐 Neutral</span>';
+        }
+
         var cardHTML = `
           <div class="comment-card" id="card-${c.id}">
-            <strong>${censorText(c.name)}</strong> <small>(${c.timestamp || ''})</small><br>
+            <strong>${censorText(c.name)}</strong> ${badgeHTML} <small>(${c.timestamp || ''})</small><br>
             <span style="display: block; margin: 4px 0;">"${censorText(c.text)}"</span>
             <div>
               <button class="btn-like-card" onclick="likeSidebarComment(${c.id})">👍 Like (${c.likes || 0})</button>
