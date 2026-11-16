@@ -106,11 +106,6 @@
       color: #2e7d32;
       border: 1px solid #a5d6a7;
     }
-    .sentiment-neutral {
-      background-color: #e3f2fd;
-      color: #1565c0;
-      border: 1px solid #90caf9;
-    }
     .sentiment-dislike {
       background-color: #ffebee;
       color: #c62828;
@@ -283,7 +278,6 @@
           <label for="comment-sentiment">Feedback Type (Pin Color):</label>
           <select id="comment-sentiment" onchange="updatePendingPinIcon()" required>
             <option value="like">👍 Like (Green Pin)</option>
-            <option value="neutral">😐 Neutral (Blue Pin)</option>
             <option value="dislike">👎 Dislike (Red Pin)</option>
           </select>
           <label for="comment-text">Feedback / Comment:</label>
@@ -302,46 +296,29 @@
   <script>
     var GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzhXpJk6rY9LRRPCu4NzL-wbmyKLdIP5V0fJGrMmka6LGcyJdxoQa1JJmbXQMAgh0U/exec";
 
-    // --- CUSTOM GREEN, BLUE & RED MAP PINS ---
-    var greenPinIcon = new L.Icon({
-      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
-      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-      iconSize: [25, 41],
-      iconAnchor: [12, 41],
-      popupAnchor: [1, -34],
-      shadowSize: [41, 41]
-    });
+    // --- SELF-CONTAINED SVG GREEN & RED PINS ---
+    function createColoredPin(hexColor) {
+      return L.divIcon({
+        className: 'custom-svg-pin',
+        html: `<svg width="28" height="42" viewBox="0 0 28 42" xmlns="http://www.w3.org/2000/svg">
+          <path d="M14 0C6.27 0 0 6.27 0 14c0 10.5 14 28 14 28s14-17.5 14-28C28 6.27 21.73 0 14 0z" fill="${hexColor}" stroke="#ffffff" stroke-width="2"/>
+          <circle cx="14" cy="14" r="5" fill="#ffffff"/>
+        </svg>`,
+        iconSize: [28, 42],
+        iconAnchor: [14, 42],
+        popupAnchor: [0, -38]
+      });
+    }
 
-    var bluePinIcon = new L.Icon({
-      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
-      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-      iconSize: [25, 41],
-      iconAnchor: [12, 41],
-      popupAnchor: [1, -34],
-      shadowSize: [41, 41]
-    });
-
-    var redPinIcon = new L.Icon({
-      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-      iconSize: [25, 41],
-      iconAnchor: [12, 41],
-      popupAnchor: [1, -34],
-      shadowSize: [41, 41]
-    });
+    var greenPinIcon = createColoredPin('#2e7d32');
+    var redPinIcon = createColoredPin('#d32f2f');
 
     function getPinIcon(sentiment) {
-      var val = sentiment ? sentiment.toLowerCase() : 'like';
-      if (val === 'dislike') return redPinIcon;
-      if (val === 'neutral') return bluePinIcon;
-      return greenPinIcon;
+      return (sentiment && sentiment.toLowerCase() === 'dislike') ? redPinIcon : greenPinIcon;
     }
 
     function getSentimentLabel(sentiment) {
-      var val = sentiment ? sentiment.toLowerCase() : 'like';
-      if (val === 'dislike') return '👎 Dislike';
-      if (val === 'neutral') return '😐 Neutral';
-      return '👍 Like';
+      return (sentiment && sentiment.toLowerCase() === 'dislike') ? '👎 Dislike' : '👍 Like';
     }
 
     // --- PROFANITY FILTER ---
@@ -433,13 +410,28 @@
           case 'mixed use': return { color: '#FF7F7F', fillColor: '#FF7F7F', fillOpacity: 0.6, weight: 1 };
           case 'flex light industrial': return { color: '#828282', fillColor: '#828282', fillOpacity: 0.6, weight: 1 };
           case 'industrial': return { color: '#4E4E4E', fillColor: '#4E4E4E', fillOpacity: 0.6, weight: 1 };
-          case 'park': return { color: '#4CE600', fillColor: '#4CE600', fillOpacity: 0.6, weight: 1 };
+
+          // Park & Open Space variations
+          case 'park':
+          case 'open space':
+          case 'park and open space':
+          case 'parks and open space':
+            return { color: '#4CE600', fillColor: '#4CE600', fillOpacity: 0.6, weight: 1 };
+
+          // Open Space Floodway variations
+          case 'open space floodway':
+          case 'floodway':
+          case 'open space - floodway':
+            return { color: '#00A884', fillColor: '#73FFDF', fillOpacity: 0.55, weight: 1.5 };
+
           case 'trail oriented development': return { color: '#319400', fillColor: '#319400', fillOpacity: 0.6, weight: 1 };
           case 'cunningham lake environmental overlay':
           case 'elkhorn environmental overlay':
           case 'ponca hills environmental overlay':
             return { color: '#E0FCD7', fillColor: '#E0FCD7', fillOpacity: 0.4, weight: 1.5 };
-          default: return { color: '#bdc3c7', fillColor: '#bdc3c7', fillOpacity: 0.3, weight: 1 };
+          default:
+            if (category) console.log("Unstyled FLUM category found:", rawCategory);
+            return { color: '#bdc3c7', fillColor: '#bdc3c7', fillOpacity: 0.3, weight: 1 };
         }
       }
     }).addTo(map);
@@ -478,6 +470,7 @@
         { label: 'Industrial', color: '#4E4E4E' },
         { header: 'Parks & Environment' },
         { label: 'Park and Open Space', color: '#4CE600' },
+        { label: 'Open Space Floodway', color: '#73FFDF' },
         { label: 'Trail Oriented Development', color: '#319400' },
         { label: 'Environmental Overlays', color: '#E0FCD7' }
       ];
@@ -577,7 +570,6 @@
         return;
       }
 
-      // Block submission if profanity is detected
       if (containsProfanity(name) || containsProfanity(text)) {
         alert("Please remove inappropriate or offensive language before submitting your public feedback.");
         return;
@@ -643,7 +635,6 @@
         return;
       }
 
-      // Block reply if profanity is detected
       if (containsProfanity(replyName) || containsProfanity(replyText)) {
         alert("Please remove inappropriate or offensive language before posting your reply.");
         return;
@@ -698,13 +689,10 @@
           });
           repliesHTML += '</div>';
         }
-        var val = c.sentiment ? c.sentiment.toLowerCase() : 'like';
-        var badgeHTML = '<span class="sentiment-badge sentiment-like">👍 Like</span>';
-        if (val === 'dislike') {
-          badgeHTML = '<span class="sentiment-badge sentiment-dislike">👎 Dislike</span>';
-        } else if (val === 'neutral') {
-          badgeHTML = '<span class="sentiment-badge sentiment-neutral">😐 Neutral</span>';
-        }
+        var isDislike = (c.sentiment && c.sentiment.toLowerCase() === 'dislike');
+        var badgeHTML = isDislike
+          ? '<span class="sentiment-badge sentiment-dislike">👎 Dislike</span>'
+          : '<span class="sentiment-badge sentiment-like">👍 Like</span>';
 
         var cardHTML = `
           <div class="comment-card" id="card-${c.id}">
