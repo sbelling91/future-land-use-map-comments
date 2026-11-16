@@ -8,6 +8,8 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet-geosearch@3.11.0/dist/geosearch.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/esri-leaflet@3.0.12/dist/esri-leaflet.js"></script>
+  <!-- Automatically applies default layer symbology from ArcGIS Portal -->
+  <script src="https://unpkg.com/esri-leaflet-renderers@3.0.1/dist/esri-leaflet-renderers.js"></script>
   <script src="https://unpkg.com/leaflet-geosearch@3.11.0/dist/geosearch.umd.js"></script>
   <style>
     body {
@@ -387,53 +389,10 @@
     });
     map.addControl(searchControl);
 
-    // 3. FLUM Future Land Use Feature Layer
+    // 3. FLUM Future Land Use Feature Layer (Uses Portal Default Symbology automatically)
     var zoningLayer = L.esri.featureLayer({
       url: 'https://dcgis.org/server/rest/services/Hosted/FLUM_Build/FeatureServer/0',
-      interactive: false,
-      style: function (feature) {
-        var rawCategory = feature.properties.category || feature.properties.Category || '';
-        var category = rawCategory.toString().trim().toLowerCase();
-        switch (category) {
-          case 'neighborhood': return { color: '#E8BEFF', fillColor: '#E8BEFF', fillOpacity: 0.6, weight: 1 };
-          case 'community': return { color: '#DF73FF', fillColor: '#DF73FF', fillOpacity: 0.6, weight: 1 };
-          case 'regional': return { color: '#C500FF', fillColor: '#C500FF', fillOpacity: 0.6, weight: 1 };
-          case 'downtown': return { color: '#8400A8', fillColor: '#8400A8', fillOpacity: 0.6, weight: 1 };
-          case 'neighborhood 1': return { color: '#FFF2B1', fillColor: '#FFF2B1', fillOpacity: 0.6, weight: 1 };
-          case 'neighborhood 2': return { color: '#FFD819', fillColor: '#FFD819', fillOpacity: 0.6, weight: 1 };
-          case 'neighborhood 3': return { color: '#D4A276', fillColor: '#D4A276', fillOpacity: 0.6, weight: 1 };
-          case 'neighborhood 4': return { color: '#5E3502', fillColor: '#5E3502', fillOpacity: 0.6, weight: 1 };
-          case 'airport': return { color: '#BEE8FF', fillColor: '#BEE8FF', fillOpacity: 0.6, weight: 1 };
-          case 'campus': return { color: '#0084A8', fillColor: '#0084A8', fillOpacity: 0.6, weight: 1 };
-          case 'infrastructure': return { color: '#162E93', fillColor: '#162E93', fillOpacity: 0.6, weight: 1 };
-          case 'traditional': return { color: '#F54949', fillColor: '#F54949', fillOpacity: 0.6, weight: 1 };
-          case 'mixed use': return { color: '#FF7F7F', fillColor: '#FF7F7F', fillOpacity: 0.6, weight: 1 };
-          case 'flex light industrial': return { color: '#828282', fillColor: '#828282', fillOpacity: 0.6, weight: 1 };
-          case 'industrial': return { color: '#4E4E4E', fillColor: '#4E4E4E', fillOpacity: 0.6, weight: 1 };
-
-          // Park & Open Space variations
-          case 'park':
-          case 'open space':
-          case 'park and open space':
-          case 'parks and open space':
-            return { color: '#4CE600', fillColor: '#4CE600', fillOpacity: 0.6, weight: 1 };
-
-          // Open Space Floodway variations
-          case 'open space floodway':
-          case 'floodway':
-          case 'open space - floodway':
-            return { color: '#00A884', fillColor: '#73FFDF', fillOpacity: 0.55, weight: 1.5 };
-
-          case 'trail oriented development': return { color: '#319400', fillColor: '#319400', fillOpacity: 0.6, weight: 1 };
-          case 'cunningham lake environmental overlay':
-          case 'elkhorn environmental overlay':
-          case 'ponca hills environmental overlay':
-            return { color: '#E0FCD7', fillColor: '#E0FCD7', fillOpacity: 0.4, weight: 1.5 };
-          default:
-            if (category) console.log("Unstyled FLUM category found:", rawCategory);
-            return { color: '#bdc3c7', fillColor: '#bdc3c7', fillOpacity: 0.3, weight: 1 };
-        }
-      }
+      interactive: false
     }).addTo(map);
 
     // --- FLOATING DYNAMIC LEGEND (Collapsible on Mobile) ---
