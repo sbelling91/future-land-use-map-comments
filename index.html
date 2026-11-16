@@ -389,7 +389,7 @@
         var rawCategory = feature.properties.category || feature.properties.Category || feature.properties.CATEGORY || '';
         var category = rawCategory.toString().trim().toLowerCase();
         switch (category) {
-          case 'conservation':
+          case 'conservation neighborhood':
             return { color: '#F8F9E5', fillColor: '#F8F9E5', fillOpacity: 0.65, weight: 1 };
 
           case 'neighborhood 1':
