@@ -189,7 +189,7 @@
       color: #333;
       border-radius: 6px;
       box-shadow: 0 0 15px rgba(0,0,0,0.2);
-      max-height: 280px;
+      max-height: 300px;
       overflow-y: auto;
       font-family: sans-serif;
       font-size: 12px;
@@ -201,6 +201,14 @@
       border-bottom: 1px solid #ccc;
       padding-bottom: 4px;
       cursor: pointer;
+    }
+    .legend-layer-header {
+      font-weight: bold;
+      margin: 8px 0 3px 0;
+      color: #111;
+      font-size: 12px;
+      border-top: 1px solid #eee;
+      padding-top: 5px;
     }
     .legend-section-title {
       font-weight: bold;
@@ -214,7 +222,7 @@
       height: 14px;
       float: left;
       margin-right: 8px;
-      opacity: 0.8;
+      opacity: 0.9;
       border: 1px solid #999;
       border-radius: 2px;
     }
@@ -389,13 +397,26 @@
     });
     map.addControl(searchControl);
 
-    // 3. FLUM Future Land Use Feature Layer (Uses Portal Default Symbology automatically)
-    var zoningLayer = L.esri.featureLayer({
+    // 3. MAP LAYERS (Uses Portal Default Symbology automatically)
+    // Layer A: Main FLUM Future Land Use Categories
+    var flumLayer = L.esri.featureLayer({
       url: 'https://dcgis.org/server/rest/services/Hosted/FLUM_Build/FeatureServer/0',
       interactive: false
     }).addTo(map);
 
-    // --- FLOATING DYNAMIC LEGEND (Collapsible on Mobile) ---
+    // Layer B: Separate Conservation Layer (Update URL/sublayer ID if hosted on a separate service)
+    var conservationLayer = L.esri.featureLayer({
+      url: 'https://dcgis.org/server/rest/services/Hosted/FLUM_Build/FeatureServer/1',
+      interactive: false
+    }).addTo(map);
+
+    // Layer C: Separate Parks and Open Space Layer (Update URL/sublayer ID if hosted on a separate service)
+    var parksOpenSpaceLayer = L.esri.featureLayer({
+      url: 'https://dcgis.org/server/rest/services/Hosted/FLUM_Build/FeatureServer/2',
+      interactive: false
+    }).addTo(map);
+
+    // --- FLOATING DYNAMIC LEGEND (Separate Layers + Grouped Subtitles) ---
     var legend = L.control({ position: 'bottomright' });
     legend.onAdd = function (map) {
       var div = L.DomUtil.create('div', 'legend');
@@ -408,34 +429,45 @@
       var bodyDiv = div.querySelector('#legend-body');
 
       var legendData = [
-        { header: 'Anchors' },
-        { label: 'Neighborhood Anchor', color: '#E8BEFF' },
-        { label: 'Community Anchor', color: '#DF73FF' },
-        { label: 'Regional Anchor', color: '#C500FF' },
-        { label: 'Downtown Anchor', color: '#8400A8' },
+        // Standalone Conservation Layer
+        { layerHeader: 'Conservation Layer' },
+        { label: 'Conservation', color: '#F8F9E5' },
+
+        // Standalone Parks & Open Space Layer
+        { layerHeader: 'Parks & Open Space Layer' },
+        { label: 'Park and Open Space', color: '#72E92C' },
+
+        // Main FLUM Categories
+        { layerHeader: 'Future Land Use Categories' },
         { header: 'Neighborhoods' },
-        { label: 'Neighborhood 1', color: '#FFF2B1' },
-        { label: 'Neighborhood 2', color: '#FFD819' },
-        { label: 'Neighborhood 3', color: '#D4A276' },
-        { label: 'Neighborhood 4', color: '#5E3502' },
+        { label: 'Neighborhood 1', color: '#FEF5BA' },
+        { label: 'Neighborhood 2', color: '#FDE042' },
+        { label: 'Neighborhood 3', color: '#DAB188' },
+
+        { header: 'Anchors' },
+        { label: 'Neighborhood Anchor', color: '#ECC8FF' },
+        { label: 'Community Anchor', color: '#E383FE' },
+        { label: 'Regional Anchor', color: '#CA21FD' },
+        { label: 'Downtown Anchor', color: '#9730B6' },
+
+        { header: 'Corridors' },
+        { label: 'Mixed Use Corridor', color: '#FE8F8F' },
+        { label: 'Traditional Corridor', color: '#F66060' },
+
         { header: 'Special Use & Infrastructure' },
-        { label: 'Airport', color: '#BEE8FF' },
-        { label: 'Campus', color: '#0084A8' },
-        { label: 'Infrastructure', color: '#162E93' },
-        { header: 'Corridors & Development' },
-        { label: 'Traditional Corridor', color: '#F54949' },
-        { label: 'Mixed Use Corridor', color: '#FF7F7F' },
-        { label: 'Flex Light Industrial', color: '#828282' },
-        { label: 'Industrial', color: '#4E4E4E' },
-        { header: 'Parks & Environment' },
-        { label: 'Park and Open Space', color: '#4CE600' },
-        { label: 'Open Space Floodway', color: '#73FFDF' },
-        { label: 'Trail Oriented Development', color: '#319400' },
-        { label: 'Environmental Overlays', color: '#E0FCD7' }
+        { label: 'Airport', color: '#CBEBFA' },
+        { label: 'Campus', color: '#3194B0' },
+        { label: 'Infrastructure', color: '#41539F' },
+
+        { header: 'Industrial' },
+        { label: 'Maker - Trade Flex', color: '#9B9B9B' },
+        { label: 'Industrial', color: '#717171' }
       ];
 
       legendData.forEach(function(item) {
-        if (item.header) {
+        if (item.layerHeader) {
+          bodyDiv.innerHTML += '<div class="legend-layer-header">' + item.layerHeader + '</div>';
+        } else if (item.header) {
           bodyDiv.innerHTML += '<div class="legend-section-title">' + item.header + '</div>';
         } else {
           bodyDiv.innerHTML += 
