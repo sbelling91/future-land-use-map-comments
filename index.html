@@ -25,7 +25,6 @@
       height: 100%;
       position: relative;
     }
-    /* Dock Search Bar to Upper-Right Corner */
     .leaflet-control-geosearch {
       position: absolute !important;
       top: 10px !important;
@@ -33,7 +32,6 @@
       z-index: 1000 !important;
       margin: 0 !important;
     }
-    /* Docked Sidebar Panel */
     #sidebar {
       width: 360px;
       height: 100%;
@@ -152,7 +150,6 @@
     .btn-delete-card:hover {
       background-color: #9a0007;
     }
-    /* Nested Reply Styling */
     .reply-container {
       margin-top: 8px;
       padding-left: 10px;
@@ -179,7 +176,6 @@
       width: 100%;
       box-sizing: border-box;
     }
-    /* Floating Map Legend Styles */
     .legend {
       background: white;
       padding: 10px 14px;
@@ -221,7 +217,6 @@
       clear: both;
     }
 
-    /* Mobile Responsive Layout */
     @media (max-width: 768px) {
       #app-container {
         flex-direction: column;
@@ -296,14 +291,11 @@
   <script>
     var GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzhXpJk6rY9LRRPCu4NzL-wbmyKLdIP5V0fJGrMmka6LGcyJdxoQa1JJmbXQMAgh0U/exec";
 
-    // --- SELF-CONTAINED SVG GREEN & RED PINS ---
+    /* SELF-CONTAINED SVG GREEN & RED PINS */
     function createColoredPin(hexColor) {
       return L.divIcon({
         className: 'custom-svg-pin',
-        html: `<svg width="28" height="42" viewBox="0 0 28 42" xmlns="http://www.w3.org/2000/svg">
-          <path d="M14 0C6.27 0 0 6.27 0 14c0 10.5 14 28 14 28s14-17.5 14-28C28 6.27 21.73 0 14 0z" fill="${hexColor}" stroke="#ffffff" stroke-width="2"/>
-          <circle cx="14" cy="14" r="5" fill="#ffffff"/>
-        </svg>`,
+        html: '<svg width="28" height="42" viewBox="0 0 28 42" xmlns="http://www.w3.org/2000/svg"><path d="M14 0C6.27 0 0 6.27 0 14c0 10.5 14 28 14 28s14-17.5 14-28C28 6.27 21.73 0 14 0z" fill="' + hexColor + '" stroke="#ffffff" stroke-width="2"/><circle cx="14" cy="14" r="5" fill="#ffffff"/></svg>',
         iconSize: [28, 42],
         iconAnchor: [14, 42],
         popupAnchor: [0, -38]
@@ -321,7 +313,7 @@
       return (sentiment && sentiment.toLowerCase() === 'dislike') ? '👎 Dislike' : '👍 Like';
     }
 
-    // --- PROFANITY FILTER ---
+    /* PROFANITY FILTER */
     const BLOCKED_WORDS = [
       "ass", "asshole", "bastard", "bitch", "bitches", "bullshit", "cock",
       "crap", "cunt", "damn", "dick", "douche", "douchebag", "fag", "faggot",
@@ -345,7 +337,7 @@
     function containsProfanity(text) {
       if (!text) return false;
       const cleaned = normalizeText(text);
-      return BLOCKED_WORDS.some(word => {
+      return BLOCKED_WORDS.some(function(word) {
         const regex = new RegExp("\\b" + word + "\\b", "i");
         return regex.test(cleaned);
       });
@@ -354,20 +346,20 @@
     function censorText(text) {
       if (!text) return "";
       let censored = text;
-      BLOCKED_WORDS.forEach(word => {
+      BLOCKED_WORDS.forEach(function(word) {
         const regex = new RegExp("\\b" + word + "\\b", "gi");
-        censored = censored.replace(regex, match => "*".repeat(match.length));
+        censored = censored.replace(regex, function(match) { return "*".repeat(match.length); });
       });
       return censored;
     }
 
     var map = L.map('map').setView([41.256429, -95.934085], 13);
 
-    // 1. Esri Public Satellite Imagery + Street Labels Hybrid Basemap
+    /* 1. Esri Public Satellite Imagery + Street Labels Hybrid Basemap */
     L.esri.basemapLayer('Imagery').addTo(map);
     L.esri.basemapLayer('ImageryTransportation').addTo(map);
 
-    // 2. ADDRESS SEARCH CONTROL (OpenStreetMap / Nominatim)
+    /* 2. ADDRESS SEARCH CONTROL (OpenStreetMap / Nominatim) */
     const searchProvider = new GeoSearch.OpenStreetMapProvider({
       params: {
         viewbox: '-96.3300,41.1350,-95.8800,41.3600',
@@ -387,7 +379,7 @@
     });
     map.addControl(searchControl);
 
-    // 3. FLUM_Build_for_Online_Engagement Feature Layer (Fast client-side styling + simplification)
+    /* 3. FLUM_Build_for_Online_Engagement Feature Layer */
     var flumLayer = L.esri.featureLayer({
       url: 'https://dcgis.org/server/rest/services/Hosted/FLUM_Build_for_Online_Engagement/FeatureServer/0',
       interactive: false,
@@ -453,7 +445,7 @@
       }
     }).addTo(map);
 
-    // --- FLOATING DYNAMIC LEGEND ---
+    /* FLOATING DYNAMIC LEGEND */
     var legend = L.control({ position: 'bottomright' });
     legend.onAdd = function (map) {
       var div = L.DomUtil.create('div', 'legend');
@@ -516,7 +508,7 @@
     };
     legend.addTo(map);
 
-    // --- SIDEBAR & PUBLIC GOOGLE SHEETS LOGIC ---
+    /* SIDEBAR & PUBLIC GOOGLE SHEETS LOGIC */
     var activeMarker = null;
     var currentCoords = null;
     var userComments = [];
@@ -528,18 +520,18 @@
         return;
       }
       fetch(GOOGLE_SCRIPT_URL)
-        .then(response => response.json())
-        .then(data => {
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
           userComments = data;
-          userComments.forEach(c => {
+          userComments.forEach(function(c) {
             var marker = L.marker([c.lat, c.lng], { icon: getPinIcon(c.sentiment) }).addTo(map);
             var sentimentLabel = getSentimentLabel(c.sentiment);
-            marker.bindPopup(`<b>${censorText(c.name)}</b> (${sentimentLabel})<br>${censorText(c.text)}`, { maxWidth: 240 });
+            marker.bindPopup('<b>' + censorText(c.name) + '</b> (' + sentimentLabel + ')<br>' + censorText(c.text), { maxWidth: 240 });
             c.marker = marker;
           });
           renderCommentsList();
         })
-        .catch(err => {
+        .catch(function(err) {
           console.error("Error loading public comments:", err);
           renderCommentsList();
         });
@@ -565,7 +557,7 @@
       document.getElementById('instruction-text').style.display = 'none';
       document.getElementById('form-container').style.display = 'block';
       document.getElementById('location-display').innerText = 
-        `Lat: ${currentCoords.lat.toFixed(5)}, Lng: ${currentCoords.lng.toFixed(5)}`;
+        'Lat: ' + currentCoords.lat.toFixed(5) + ', Lng: ' + currentCoords.lng.toFixed(5);
 
       if (window.innerWidth <= 768) {
         document.getElementById('sidebar').scrollIntoView({ behavior: 'smooth' });
@@ -615,12 +607,12 @@
           method: "POST",
           headers: { "Content-Type": "text/plain;charset=utf-8" },
           body: JSON.stringify(commentData)
-        }).catch(err => console.error("Error posting to sheet:", err));
+        }).catch(function(err) { console.error("Error posting to sheet:", err); });
       }
 
       var sentimentLabel = getSentimentLabel(sentiment);
       activeMarker.setIcon(getPinIcon(sentiment));
-      activeMarker.bindPopup(`<b>${commentData.name}</b> (${sentimentLabel})<br>${commentData.text}`, { maxWidth: 240 });
+      activeMarker.bindPopup('<b>' + commentData.name + '</b> (' + sentimentLabel + ')<br>' + commentData.text, { maxWidth: 240 });
       commentData.marker = activeMarker;
       userComments.push(commentData);
       activeMarker = null;
@@ -687,3 +679,53 @@
     function renderCommentsList() {
       var list = document.getElementById('comments-list');
       if (userComments.length === 0) {
+        list.innerHTML = '<em>No comments submitted yet.</em>';
+        return;
+      }
+      userComments.sort(function(a, b) {
+        if (b.likes !== a.likes) {
+          return b.likes - a.likes;
+        }
+        return b.id - a.id;
+      });
+      list.innerHTML = '';
+      userComments.forEach(function(c) {
+        var repliesHTML = '';
+        if (c.replies && c.replies.length > 0) {
+          repliesHTML += '<div class="reply-container">';
+          c.replies.forEach(function(r) {
+            repliesHTML += 
+              '<div class="reply-card">' +
+                '<strong>' + censorText(r.name) + '</strong> <small>(' + (r.timestamp || '') + ')</small><br>' +
+                '<span>' + censorText(r.text) + '</span>' +
+              '</div>';
+          });
+          repliesHTML += '</div>';
+        }
+        var isDislike = (c.sentiment && c.sentiment.toLowerCase() === 'dislike');
+        var badgeHTML = isDislike
+          ? '<span class="sentiment-badge sentiment-dislike">👎 Dislike</span>'
+          : '<span class="sentiment-badge sentiment-like">👍 Like</span>';
+
+        var cardHTML = 
+          '<div class="comment-card" id="card-' + c.id + '">' +
+            '<strong>' + censorText(c.name) + '</strong> ' + badgeHTML + ' <small>(' + (c.timestamp || '') + ')</small><br>' +
+            '<span style="display: block; margin: 4px 0;">"' + censorText(c.text) + '"</span>' +
+            '<div>' +
+              '<button class="btn-like-card" onclick="likeSidebarComment(' + c.id + ')">👍 Like (' + (c.likes || 0) + ')</button>' +
+              '<button class="btn-reply-toggle" onclick="toggleReplyForm(' + c.id + ')">💬 Reply (' + (c.replies ? c.replies.length : 0) + ')</button>' +
+              '<button class="btn-delete-card" onclick="deleteSidebarComment(' + c.id + ')">Delete</button>' +
+            '</div>' +
+            '<div class="reply-form" id="reply-form-' + c.id + '" style="display: none;">' +
+              '<input type="text" id="reply-name-' + c.id + '" placeholder="Your Name" required />' +
+              '<textarea id="reply-text-' + c.id + '" rows="2" placeholder="Write a reply..." required></textarea>' +
+              '<button class="btn-submit" style="padding: 6px; font-size: 12px;" onclick="submitReply(' + c.id + ')">Post Reply</button>' +
+            '</div>' +
+            repliesHTML +
+          '</div>';
+        list.insertAdjacentHTML('beforeend', cardHTML);
+      });
+    }
+  </script>
+</body>
+</html>
