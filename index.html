@@ -8,8 +8,6 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet-geosearch@3.11.0/dist/geosearch.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/esri-leaflet@3.0.12/dist/esri-leaflet.js"></script>
-  <!-- Automatically applies default layer symbology from ArcGIS Portal -->
-  <script src="https://unpkg.com/esri-leaflet-renderers@3.0.1/dist/esri-leaflet-renderers.js"></script>
   <script src="https://unpkg.com/leaflet-geosearch@3.11.0/dist/geosearch.umd.js"></script>
   <style>
     body {
@@ -202,14 +200,6 @@
       padding-bottom: 4px;
       cursor: pointer;
     }
-    .legend-layer-header {
-      font-weight: bold;
-      margin: 8px 0 3px 0;
-      color: #111;
-      font-size: 12px;
-      border-top: 1px solid #eee;
-      padding-top: 5px;
-    }
     .legend-section-title {
       font-weight: bold;
       margin: 6px 0 2px 0;
@@ -397,26 +387,73 @@
     });
     map.addControl(searchControl);
 
-    // 3. MAP LAYERS (Uses Portal Default Symbology automatically)
-    // Layer A: Main FLUM Future Land Use Categories
+    // 3. FLUM_Build_for_Online_Engagement Feature Layer (Fast client-side styling + simplification)
     var flumLayer = L.esri.featureLayer({
-      url: 'https://dcgis.org/server/rest/services/Hosted/FLUM_Build/FeatureServer/0',
-      interactive: false
+      url: 'https://dcgis.org/server/rest/services/Hosted/FLUM_Build_for_Online_Engagement/FeatureServer/0',
+      interactive: false,
+      simplifyFactor: 0.5,
+      precision: 5,
+      style: function (feature) {
+        var rawCategory = feature.properties.category || feature.properties.Category || feature.properties.CATEGORY || '';
+        var category = rawCategory.toString().trim().toLowerCase();
+        switch (category) {
+          case 'conservation':
+            return { color: '#F8F9E5', fillColor: '#F8F9E5', fillOpacity: 0.65, weight: 1 };
+
+          case 'neighborhood 1':
+            return { color: '#FEF5BA', fillColor: '#FEF5BA', fillOpacity: 0.65, weight: 1 };
+          case 'neighborhood 2':
+            return { color: '#FDE042', fillColor: '#FDE042', fillOpacity: 0.65, weight: 1 };
+          case 'neighborhood 3':
+            return { color: '#DAB188', fillColor: '#DAB188', fillOpacity: 0.65, weight: 1 };
+
+          case 'neighborhood anchor':
+          case 'neighborhood':
+            return { color: '#ECC8FF', fillColor: '#ECC8FF', fillOpacity: 0.65, weight: 1 };
+          case 'community anchor':
+          case 'community':
+            return { color: '#E383FE', fillColor: '#E383FE', fillOpacity: 0.65, weight: 1 };
+          case 'regional anchor':
+          case 'regional':
+            return { color: '#CA21FD', fillColor: '#CA21FD', fillOpacity: 0.65, weight: 1 };
+          case 'downtown anchor':
+          case 'downtown':
+            return { color: '#9730B6', fillColor: '#9730B6', fillOpacity: 0.65, weight: 1 };
+
+          case 'mixed use corridor':
+          case 'mixed use':
+            return { color: '#FE8F8F', fillColor: '#FE8F8F', fillOpacity: 0.65, weight: 1 };
+          case 'traditional corridor':
+          case 'traditional':
+            return { color: '#F66060', fillColor: '#F66060', fillOpacity: 0.65, weight: 1 };
+
+          case 'airport':
+            return { color: '#CBEBFA', fillColor: '#CBEBFA', fillOpacity: 0.65, weight: 1 };
+          case 'campus':
+            return { color: '#3194B0', fillColor: '#3194B0', fillOpacity: 0.65, weight: 1 };
+          case 'infrastructure':
+            return { color: '#41539F', fillColor: '#41539F', fillOpacity: 0.65, weight: 1 };
+
+          case 'maker - trade flex':
+          case 'flex light industrial':
+            return { color: '#9B9B9B', fillColor: '#9B9B9B', fillOpacity: 0.65, weight: 1 };
+          case 'industrial':
+            return { color: '#717171', fillColor: '#717171', fillOpacity: 0.65, weight: 1 };
+
+          case 'park and open space':
+          case 'parks and open space':
+          case 'park':
+          case 'open space':
+            return { color: '#72E92C', fillColor: '#72E92C', fillOpacity: 0.65, weight: 1 };
+
+          default:
+            if (category) console.log("Unstyled FLUM category:", rawCategory);
+            return { color: '#bdc3c7', fillColor: '#bdc3c7', fillOpacity: 0.3, weight: 1 };
+        }
+      }
     }).addTo(map);
 
-    // Layer B: Separate Conservation Layer (Update URL/sublayer ID if hosted on a separate service)
-    var conservationLayer = L.esri.featureLayer({
-      url: 'https://dcgis.org/server/rest/services/Hosted/FLUM_Build/FeatureServer/1',
-      interactive: false
-    }).addTo(map);
-
-    // Layer C: Separate Parks and Open Space Layer (Update URL/sublayer ID if hosted on a separate service)
-    var parksOpenSpaceLayer = L.esri.featureLayer({
-      url: 'https://dcgis.org/server/rest/services/Hosted/FLUM_Build/FeatureServer/2',
-      interactive: false
-    }).addTo(map);
-
-    // --- FLOATING DYNAMIC LEGEND (Separate Layers + Grouped Subtitles) ---
+    // --- FLOATING DYNAMIC LEGEND ---
     var legend = L.control({ position: 'bottomright' });
     legend.onAdd = function (map) {
       var div = L.DomUtil.create('div', 'legend');
@@ -429,16 +466,9 @@
       var bodyDiv = div.querySelector('#legend-body');
 
       var legendData = [
-        // Standalone Conservation Layer
-        { layerHeader: 'Conservation Layer' },
+        { header: 'Conservation' },
         { label: 'Conservation', color: '#F8F9E5' },
 
-        // Standalone Parks & Open Space Layer
-        { layerHeader: 'Parks & Open Space Layer' },
-        { label: 'Park and Open Space', color: '#72E92C' },
-
-        // Main FLUM Categories
-        { layerHeader: 'Future Land Use Categories' },
         { header: 'Neighborhoods' },
         { label: 'Neighborhood 1', color: '#FEF5BA' },
         { label: 'Neighborhood 2', color: '#FDE042' },
@@ -461,13 +491,14 @@
 
         { header: 'Industrial' },
         { label: 'Maker - Trade Flex', color: '#9B9B9B' },
-        { label: 'Industrial', color: '#717171' }
+        { label: 'Industrial', color: '#717171' },
+
+        { header: 'Parks & Open Space' },
+        { label: 'Park and Open Space', color: '#72E92C' }
       ];
 
       legendData.forEach(function(item) {
-        if (item.layerHeader) {
-          bodyDiv.innerHTML += '<div class="legend-layer-header">' + item.layerHeader + '</div>';
-        } else if (item.header) {
+        if (item.header) {
           bodyDiv.innerHTML += '<div class="legend-section-title">' + item.header + '</div>';
         } else {
           bodyDiv.innerHTML += 
@@ -656,55 +687,3 @@
     function renderCommentsList() {
       var list = document.getElementById('comments-list');
       if (userComments.length === 0) {
-        list.innerHTML = '<em>No comments submitted yet.</em>';
-        return;
-      }
-      userComments.sort(function(a, b) {
-        if (b.likes !== a.likes) {
-          return b.likes - a.likes;
-        }
-        return b.id - a.id;
-      });
-      list.innerHTML = '';
-      userComments.forEach(function(c) {
-        var repliesHTML = '';
-        if (c.replies && c.replies.length > 0) {
-          repliesHTML += '<div class="reply-container">';
-          c.replies.forEach(function(r) {
-            repliesHTML += `
-              <div class="reply-card">
-                <strong>${censorText(r.name)}</strong> <small>(${r.timestamp || ''})</small><br>
-                <span>${censorText(r.text)}</span>
-              </div>
-            `;
-          });
-          repliesHTML += '</div>';
-        }
-        var isDislike = (c.sentiment && c.sentiment.toLowerCase() === 'dislike');
-        var badgeHTML = isDislike
-          ? '<span class="sentiment-badge sentiment-dislike">👎 Dislike</span>'
-          : '<span class="sentiment-badge sentiment-like">👍 Like</span>';
-
-        var cardHTML = `
-          <div class="comment-card" id="card-${c.id}">
-            <strong>${censorText(c.name)}</strong> ${badgeHTML} <small>(${c.timestamp || ''})</small><br>
-            <span style="display: block; margin: 4px 0;">"${censorText(c.text)}"</span>
-            <div>
-              <button class="btn-like-card" onclick="likeSidebarComment(${c.id})">👍 Like (${c.likes || 0})</button>
-              <button class="btn-reply-toggle" onclick="toggleReplyForm(${c.id})">💬 Reply (${c.replies ? c.replies.length : 0})</button>
-              <button class="btn-delete-card" onclick="deleteSidebarComment(${c.id})">Delete</button>
-            </div>
-            <div class="reply-form" id="reply-form-${c.id}" style="display: none;">
-              <input type="text" id="reply-name-${c.id}" placeholder="Your Name" required />
-              <textarea id="reply-text-${c.id}" rows="2" placeholder="Write a reply..." required></textarea>
-              <button class="btn-submit" style="padding: 6px; font-size: 12px;" onclick="submitReply(${c.id})">Post Reply</button>
-            </div>
-            ${repliesHTML}
-          </div>
-        `;
-        list.insertAdjacentHTML('beforeend', cardHTML);
-      });
-    }
-  </script>
-</body>
-</html>
