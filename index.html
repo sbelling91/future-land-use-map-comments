@@ -234,21 +234,18 @@
         </div>
       </div>
 
-      <!-- SIDEBAR COMMENTS LIST (Controlled by SHOW_SIDEBAR_COMMENTS in script below) -->
-      <div id="public-feedback-section" style="display: none;">
-        <hr style="margin: 20px 0;">
-        <h3>Submitted Feedback</h3>
-        <div id="comments-list">
-          <em>Loading public feedback...</em>
-        </div>
+      <hr style="margin: 20px 0;">
+      <h3>Submitted Feedback</h3>
+      <div id="comments-list">
+        <em>Loading public feedback...</em>
       </div>
     </div>
   </div>
   <script>
     var GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzhXpJk6rY9LRRPCu4NzL-wbmyKLdIP5V0fJGrMmka6LGcyJdxoQa1JJmbXQMAgh0U/exec";
 
-    /* SET TO true AT A LATER DATE TO DISPLAY COMMENT TEXT IN PIN POPUPS & SIDEBAR LIST */
-    var SHOW_SIDEBAR_COMMENTS = false;
+    /* SET TO true AT A LATER DATE TO REVEAL WRITTEN COMMENT TEXT IN SIDEBAR CARDS & PIN POPUPS */
+    var SHOW_COMMENT_TEXT = false;
 
     /* SELF-CONTAINED COLORBLIND-SAFE SVG PINS (#57C4AD / #E6E1BC / #EDA247) */
     function createColoredPin(hexColor) {
@@ -290,7 +287,7 @@
     function buildPopupHTML(name, sentiment, text) {
       var sentimentLabel = getSentimentLabel(sentiment);
       var popupContent = '<b>' + censorText(name) + '</b> (' + sentimentLabel + ')';
-      if (SHOW_SIDEBAR_COMMENTS && text) {
+      if (SHOW_COMMENT_TEXT && text) {
         popupContent += '<br>' + censorText(text);
       }
       return popupContent;
@@ -495,10 +492,6 @@
     var currentCoords = null;
     var userComments = [];
 
-    if (SHOW_SIDEBAR_COMMENTS) {
-      document.getElementById('public-feedback-section').style.display = 'block';
-    }
-
     function loadPublicComments() {
       if (GOOGLE_SCRIPT_URL.includes("YOUR_GOOGLE_SCRIPT_URL_HERE")) {
         console.warn("Skipping load: Replace GOOGLE_SCRIPT_URL with your Apps Script Web App URL.");
@@ -609,21 +602,13 @@
       document.getElementById('comment-sentiment').value = 'like';
       document.getElementById('comment-text').value = '';
       document.getElementById('form-container').style.display = 'none';
-
-      if (SHOW_SIDEBAR_COMMENTS) {
-        document.getElementById('instruction-text').style.display = 'block';
-      } else {
-        document.getElementById('submission-confirmation').style.display = 'block';
-      }
+      document.getElementById('submission-confirmation').style.display = 'block';
     };
 
     function renderCommentsList() {
-      if (!SHOW_SIDEBAR_COMMENTS) {
-        return;
-      }
       var list = document.getElementById('comments-list');
       if (userComments.length === 0) {
-        list.innerHTML = '<em>No comments submitted yet.</em>';
+        list.innerHTML = '<em>No feedback submitted yet.</em>';
         return;
       }
       userComments.sort(function(a, b) {
@@ -641,11 +626,14 @@
         }
 
         var timestampHTML = c.timestamp ? ' <small>(' + c.timestamp + ')</small>' : '';
+        var commentTextHTML = (SHOW_COMMENT_TEXT && c.text)
+          ? '<br><span style="display: block; margin: 4px 0;">"' + censorText(c.text) + '"</span>'
+          : '';
 
         var cardHTML = 
           '<div class="comment-card" id="card-' + c.id + '">' +
-            '<strong>' + censorText(c.name) + '</strong> ' + badgeHTML + timestampHTML + '<br>' +
-            '<span style="display: block; margin: 4px 0;">"' + censorText(c.text) + '"</span>' +
+            '<strong>' + censorText(c.name) + '</strong> ' + badgeHTML + timestampHTML +
+            commentTextHTML +
           '</div>';
         list.insertAdjacentHTML('beforeend', cardHTML);
       });
