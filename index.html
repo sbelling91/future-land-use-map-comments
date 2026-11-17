@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Douglas County FLUM Map - Shared Public Comments</title>
+  <title>Douglas County FLUM Map - Public Feedback</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <link rel="stylesheet" href="https://unpkg.com/leaflet-geosearch@3.11.0/dist/geosearch.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -81,6 +81,16 @@
       border-radius: 4px;
       width: 100%;
       margin-top: 6px;
+    }
+    .submission-confirmation {
+      background-color: #e6f6f2;
+      border: 1px solid #57C4AD;
+      color: #1f6b5c;
+      padding: 10px 12px;
+      border-radius: 4px;
+      font-size: 13px;
+      margin-top: 12px;
+      display: none;
     }
     .comment-card {
       background: white;
@@ -200,6 +210,9 @@
     <div id="sidebar">
       <h2>Provide Feedback</h2>
       <p id="instruction-text">Tap anywhere on the map to place a feedback pin.</p>
+      <div id="submission-confirmation" class="submission-confirmation">
+        <strong>Thank you!</strong> Your feedback has been recorded. Tap anywhere on the map to submit another comment.
+      </div>
       <div id="form-container" style="display: none;">
         <div class="comment-form">
           <label>Location Coordinates:</label>
@@ -211,7 +224,7 @@
           <label for="comment-sentiment">Feedback Type (Pin Color):</label>
           <select id="comment-sentiment" onchange="updatePendingPinIcon()" required>
             <option value="like">👍 Like (Teal Pin)</option>
-            <option value="neutral">😐 Neutral (Slate Pin)</option>
+            <option value="neutral">😐 Neutral (Cream Pin)</option>
             <option value="dislike">👎 Dislike (Orange Pin)</option>
           </select>
           <label for="comment-text">Feedback / Comment:</label>
@@ -220,15 +233,22 @@
           <button class="btn-cancel" onclick="cancelPendingPin()">Cancel Pin</button>
         </div>
       </div>
-      <hr style="margin: 20px 0;">
-      <h3>Submitted Feedback</h3>
-      <div id="comments-list">
-        <em>Loading public feedback...</em>
+
+      <!-- SIDEBAR COMMENTS LIST (Controlled by SHOW_SIDEBAR_COMMENTS in script below) -->
+      <div id="public-feedback-section" style="display: none;">
+        <hr style="margin: 20px 0;">
+        <h3>Submitted Feedback</h3>
+        <div id="comments-list">
+          <em>Loading public feedback...</em>
+        </div>
       </div>
     </div>
   </div>
   <script>
     var GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzhXpJk6rY9LRRPCu4NzL-wbmyKLdIP5V0fJGrMmka6LGcyJdxoQa1JJmbXQMAgh0U/exec";
+
+    /* SET TO true AT A LATER DATE TO DISPLAY COMMENT TEXT IN PIN POPUPS & SIDEBAR LIST */
+    var SHOW_SIDEBAR_COMMENTS = false;
 
     /* SELF-CONTAINED COLORBLIND-SAFE SVG PINS (#57C4AD / #E6E1BC / #EDA247) */
     function createColoredPin(hexColor) {
@@ -241,9 +261,9 @@
       });
     }
 
-    var greenPinIcon = createColoredPin('#39c1a1');   /* Teal (Like) */
-    var neutralPinIcon = createColoredPin('#7c9ba9'); /* Cream (Neutral) */
-    var redPinIcon = createColoredPin('#f05326');     /* Orange (Dislike) */
+    var greenPinIcon = createColoredPin('#57C4AD');   /* Teal (Like) */
+    var neutralPinIcon = createColoredPin('#E6E1BC'); /* Cream (Neutral) */
+    var redPinIcon = createColoredPin('#EDA247');     /* Orange (Dislike) */
 
     function normalizeSentiment(sentiment) {
       if (!sentiment) return 'like';
@@ -265,6 +285,15 @@
       if (val === 'dislike') return '👎 Dislike';
       if (val === 'neutral') return '😐 Neutral';
       return '👍 Like';
+    }
+
+    function buildPopupHTML(name, sentiment, text) {
+      var sentimentLabel = getSentimentLabel(sentiment);
+      var popupContent = '<b>' + censorText(name) + '</b> (' + sentimentLabel + ')';
+      if (SHOW_SIDEBAR_COMMENTS && text) {
+        popupContent += '<br>' + censorText(text);
+      }
+      return popupContent;
     }
 
     /* PROFANITY FILTER */
@@ -466,6 +495,10 @@
     var currentCoords = null;
     var userComments = [];
 
+    if (SHOW_SIDEBAR_COMMENTS) {
+      document.getElementById('public-feedback-section').style.display = 'block';
+    }
+
     function loadPublicComments() {
       if (GOOGLE_SCRIPT_URL.includes("YOUR_GOOGLE_SCRIPT_URL_HERE")) {
         console.warn("Skipping load: Replace GOOGLE_SCRIPT_URL with your Apps Script Web App URL.");
@@ -479,8 +512,7 @@
           userComments.forEach(function(c) {
             var rawSentiment = c.sentiment || c.Sentiment || c.SENTIMENT || 'like';
             var marker = L.marker([c.lat, c.lng], { icon: getPinIcon(rawSentiment) }).addTo(map);
-            var sentimentLabel = getSentimentLabel(rawSentiment);
-            marker.bindPopup('<b>' + censorText(c.name) + '</b> (' + sentimentLabel + ')<br>' + censorText(c.text), { maxWidth: 240 });
+            marker.bindPopup(buildPopupHTML(c.name, rawSentiment, c.text), { maxWidth: 240 });
             c.marker = marker;
           });
           renderCommentsList();
@@ -508,6 +540,7 @@
       } else {
         activeMarker = L.marker(currentCoords, { icon: getPinIcon(selectedSentiment) }).addTo(map);
       }
+      document.getElementById('submission-confirmation').style.display = 'none';
       document.getElementById('instruction-text').style.display = 'none';
       document.getElementById('form-container').style.display = 'block';
       document.getElementById('location-display').innerText = 
@@ -564,9 +597,8 @@
         }).catch(function(err) { console.error("Error posting to sheet:", err); });
       }
 
-      var sentimentLabel = getSentimentLabel(sentiment);
       activeMarker.setIcon(getPinIcon(sentiment));
-      activeMarker.bindPopup('<b>' + commentData.name + '</b> (' + sentimentLabel + ')<br>' + commentData.text, { maxWidth: 240 });
+      activeMarker.bindPopup(buildPopupHTML(commentData.name, sentiment, commentData.text), { maxWidth: 240 });
       commentData.marker = activeMarker;
       userComments.push(commentData);
       activeMarker = null;
@@ -577,10 +609,18 @@
       document.getElementById('comment-sentiment').value = 'like';
       document.getElementById('comment-text').value = '';
       document.getElementById('form-container').style.display = 'none';
-      document.getElementById('instruction-text').style.display = 'block';
+
+      if (SHOW_SIDEBAR_COMMENTS) {
+        document.getElementById('instruction-text').style.display = 'block';
+      } else {
+        document.getElementById('submission-confirmation').style.display = 'block';
+      }
     };
 
     function renderCommentsList() {
+      if (!SHOW_SIDEBAR_COMMENTS) {
+        return;
+      }
       var list = document.getElementById('comments-list');
       if (userComments.length === 0) {
         list.innerHTML = '<em>No comments submitted yet.</em>';
