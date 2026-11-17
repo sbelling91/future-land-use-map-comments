@@ -425,6 +425,43 @@
         }
       }
     }).addTo(map);
+    default:
+            if (category) console.log("Unstyled FLUM category:", rawCategory);
+            return { color: '#bdc3c7', fillColor: '#bdc3c7', fillOpacity: 0.3, weight: 1 };
+        }
+      }
+    }).addTo(map);
+
+    /* 4. City Limits Boundary (Hollow Outline) */
+    var cityLimitsLayer = L.esri.featureLayer({
+      url: 'https://dcgis.org/server/rest/services/Hosted/City_Limits_(source)_view/FeatureServer/0',
+      interactive: false,
+      style: function () {
+        return {
+          color: '#111111',
+          weight: 2.5,
+          opacity: 0.9,
+          fill: false
+        };
+      }
+    }).addTo(map);
+
+    /* 5. ETJ Boundary (Hollow Dashed Outline) */
+    var etjLayer = L.esri.featureLayer({
+      url: 'https://dcgis.org/server/rest/services/Hosted/ETJ_view/FeatureServer/0',
+      interactive: false,
+      style: function () {
+        return {
+          color: '#ffffff',
+          weight: 2,
+          opacity: 0.9,
+          dashArray: '6, 6',
+          fill: false
+        };
+      }
+    }).addTo(map);
+
+    /* FLOATING DYNAMIC LEGEND */
 
     /* FLOATING DYNAMIC LEGEND */
     var legend = L.control({ position: 'bottomright' });
