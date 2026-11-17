@@ -211,7 +211,7 @@
           <label for="comment-sentiment">Feedback Type (Pin Color):</label>
           <select id="comment-sentiment" onchange="updatePendingPinIcon()" required>
             <option value="like">👍 Like (Teal Pin)</option>
-            <option value="neutral">😐 Neutral (Cream Pin)</option>
+            <option value="neutral">😐 Neutral (Slate Pin)</option>
             <option value="dislike">👎 Dislike (Orange Pin)</option>
           </select>
           <label for="comment-text">Feedback / Comment:</label>
@@ -241,9 +241,9 @@
       });
     }
 
-    var greenPinIcon = createColoredPin('#57C4AD');   /* Teal (Like) */
-    var neutralPinIcon = createColoredPin('#E6E1BC'); /* Cream (Neutral) */
-    var redPinIcon = createColoredPin('#EDA247');     /* Orange (Dislike) */
+    var greenPinIcon = createColoredPin('#39c1a1');   /* Teal (Like) */
+    var neutralPinIcon = createColoredPin('#7c9ba9'); /* Cream (Neutral) */
+    var redPinIcon = createColoredPin('#f05326');     /* Orange (Dislike) */
 
     function normalizeSentiment(sentiment) {
       if (!sentiment) return 'like';
