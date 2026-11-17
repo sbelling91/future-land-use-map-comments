@@ -160,6 +160,14 @@
       border: 1px solid #999;
       border-radius: 2px;
     }
+    .legend-line {
+      width: 14px;
+      height: 0;
+      float: left;
+      margin-right: 8px;
+      margin-top: 7px;
+      border-top-width: 2.5px;
+    }
     .legend-item {
       margin-bottom: 3px;
       clear: both;
@@ -224,7 +232,7 @@
           <label for="comment-sentiment">Feedback Type (Pin Color):</label>
           <select id="comment-sentiment" onchange="updatePendingPinIcon()" required>
             <option value="like">👍 Like (Teal Pin)</option>
-            <option value="neutral">😐 Neutral (Slate Pin)</option>
+            <option value="neutral">😐 Neutral (Cream Pin)</option>
             <option value="dislike">👎 Dislike (Orange Pin)</option>
           </select>
           <label for="comment-text">Feedback / Comment:</label>
@@ -258,9 +266,9 @@
       });
     }
 
-    var greenPinIcon = createColoredPin('#39c1a1');   /* Teal (Like) */
-    var neutralPinIcon = createColoredPin('#7c9ba9'); /* Cream (Neutral) */
-    var redPinIcon = createColoredPin('#f05326');     /* Orange (Dislike) */
+    var greenPinIcon = createColoredPin('#57C4AD');   /* Teal (Like) */
+    var neutralPinIcon = createColoredPin('#E6E1BC'); /* Cream (Neutral) */
+    var redPinIcon = createColoredPin('#EDA247');     /* Orange (Dislike) */
 
     function normalizeSentiment(sentiment) {
       if (!sentiment) return 'like';
@@ -359,7 +367,7 @@
     });
     map.addControl(searchControl);
 
-    /* 3. FLUM Feature Layer (Replace URL below with your new V2 FeatureServer/0 URL if needed) */
+    /* 3. FLUM Feature Layer */
     var flumLayer = L.esri.featureLayer({
       url: 'https://dcgis.org/server/rest/services/Hosted/FLUM_Build_for_Online_Engagement_View/FeatureServer/0',
       interactive: false,
@@ -425,12 +433,6 @@
         }
       }
     }).addTo(map);
-    default:
-            if (category) console.log("Unstyled FLUM category:", rawCategory);
-            return { color: '#bdc3c7', fillColor: '#bdc3c7', fillOpacity: 0.3, weight: 1 };
-        }
-      }
-    }).addTo(map);
 
     /* 4. City Limits Boundary (Hollow Outline) */
     var cityLimitsLayer = L.esri.featureLayer({
@@ -462,8 +464,6 @@
     }).addTo(map);
 
     /* FLOATING DYNAMIC LEGEND */
-
-    /* FLOATING DYNAMIC LEGEND */
     var legend = L.control({ position: 'bottomright' });
     legend.onAdd = function (map) {
       var div = L.DomUtil.create('div', 'legend');
@@ -476,6 +476,10 @@
       var bodyDiv = div.querySelector('#legend-body');
 
       var legendData = [
+        { header: 'Boundaries' },
+        { label: 'City Limits', lineStyle: 'solid', color: '#111111' },
+        { label: 'ETJ', lineStyle: 'dashed', color: '#666666' },
+
         { header: 'Neighborhoods' },
         { label: 'Conservation Neighborhood', color: '#F8F9E5' },
         { label: 'Neighborhood 1', color: '#FEF5BA' },
@@ -508,6 +512,11 @@
       legendData.forEach(function(item) {
         if (item.header) {
           bodyDiv.innerHTML += '<div class="legend-section-title">' + item.header + '</div>';
+        } else if (item.lineStyle) {
+          bodyDiv.innerHTML += 
+            '<div class="legend-item">' +
+              '<span class="legend-line" style="border-top-style:' + item.lineStyle + '; border-top-color:' + item.color + ';"></span> ' + item.label +
+            '</div>';
         } else {
           bodyDiv.innerHTML += 
             '<div class="legend-item">' +
