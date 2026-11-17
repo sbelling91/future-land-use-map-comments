@@ -272,8 +272,8 @@
           <input type="email" id="comment-email" placeholder="e.g. jane.doe@example.com" required />
           <label for="comment-sentiment">Feedback Type (Pin Color):</label>
           <select id="comment-sentiment" onchange="updatePendingPinIcon()" required>
-            <option value="like">👍 Like (Green Pin)</option>
-            <option value="dislike">👎 Dislike (Red Pin)</option>
+            <option value="like">👍 Like (Teal Pin)</option>
+            <option value="dislike">👎 Dislike (Orange Pin)</option>
           </select>
           <label for="comment-text">Feedback / Comment:</label>
           <textarea id="comment-text" rows="4" placeholder="What are your thoughts on this future land use?" required></textarea>
@@ -302,8 +302,8 @@
       });
     }
 
-    var greenPinIcon = createColoredPin('#2e7d32');
-    var redPinIcon = createColoredPin('#d32f2f');
+    var greenPinIcon = createColoredPin('#57c4ad');
+    var redPinIcon = createColoredPin('#eda247');
 
     function getPinIcon(sentiment) {
       return (sentiment && sentiment.toLowerCase() === 'dislike') ? redPinIcon : greenPinIcon;
