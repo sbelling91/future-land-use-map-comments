@@ -100,19 +100,19 @@
       vertical-align: middle;
     }
     .sentiment-like {
-      background-color: #e3f2fd;
-      color: #005a8d;
-      border: 1px solid #90caf9;
+      background-color: #e6f6f2;
+      color: #1f6b5c;
+      border: 1px solid #57C4AD;
     }
     .sentiment-neutral {
-      background-color: #fffde7;
-      color: #827717;
-      border: 1px solid #fff59d;
+      background-color: #f7f5e8;
+      color: #5e5a38;
+      border: 1px solid #c9c396;
     }
     .sentiment-dislike {
-      background-color: #fbe9e7;
-      color: #bf360c;
-      border: 1px solid #ffab91;
+      background-color: #fdf2e4;
+      color: #8f5614;
+      border: 1px solid #EDA247;
     }
     .legend {
       background: white;
@@ -210,8 +210,8 @@
           <input type="email" id="comment-email" placeholder="e.g. jane.doe@example.com" required />
           <label for="comment-sentiment">Feedback Type (Pin Color):</label>
           <select id="comment-sentiment" onchange="updatePendingPinIcon()" required>
-            <option value="like">👍 Like (Blue Pin)</option>
-            <option value="neutral">😐 Neutral (Yellow Pin)</option>
+            <option value="like">👍 Like (Teal Pin)</option>
+            <option value="neutral">😐 Neutral (Cream Pin)</option>
             <option value="dislike">👎 Dislike (Orange Pin)</option>
           </select>
           <label for="comment-text">Feedback / Comment:</label>
@@ -230,30 +230,38 @@
   <script>
     var GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzhXpJk6rY9LRRPCu4NzL-wbmyKLdIP5V0fJGrMmka6LGcyJdxoQa1JJmbXQMAgh0U/exec";
 
-    /* SELF-CONTAINED COLORBLIND-SAFE SVG PINS (BLUE / YELLOW / ORANGE) */
+    /* SELF-CONTAINED COLORBLIND-SAFE SVG PINS (#57C4AD / #E6E1BC / #EDA247) */
     function createColoredPin(hexColor) {
       return L.divIcon({
         className: 'custom-svg-pin',
-        html: '<svg width="28" height="42" viewBox="0 0 28 42" xmlns="http://www.w3.org/2000/svg"><path d="M14 0C6.27 0 0 6.27 0 14c0 10.5 14 28 14 28s14-17.5 14-28C28 6.27 21.73 0 14 0z" fill="' + hexColor + '" stroke="#ffffff" stroke-width="2"/><circle cx="14" cy="14" r="5" fill="#ffffff"/></svg>',
+        html: '<svg width="28" height="42" viewBox="0 0 28 42" xmlns="http://www.w3.org/2000/svg"><path d="M14 0C6.27 0 0 6.27 0 14c0 10.5 14 28 14 28s14-17.5 14-28C28 6.27 21.73 0 14 0z" fill="' + hexColor + '" stroke="#333333" stroke-width="1.5"/><circle cx="14" cy="14" r="5" fill="#ffffff"/></svg>',
         iconSize: [28, 42],
         iconAnchor: [14, 42],
         popupAnchor: [0, -38]
       });
     }
 
-    var greenPinIcon = createColoredPin('#0072B2');   /* Colorblind-safe Blue (Like) */
-    var neutralPinIcon = createColoredPin('#F0E442'); /* Colorblind-safe Yellow (Neutral) */
-    var redPinIcon = createColoredPin('#D55E00');     /* Colorblind-safe Orange (Dislike) */
+    var greenPinIcon = createColoredPin('#57C4AD');   /* Teal (Like) */
+    var neutralPinIcon = createColoredPin('#E6E1BC'); /* Cream (Neutral) */
+    var redPinIcon = createColoredPin('#EDA247');     /* Orange (Dislike) */
+
+    function normalizeSentiment(sentiment) {
+      if (!sentiment) return 'like';
+      var val = sentiment.toString().trim().toLowerCase();
+      if (val.includes('dislike')) return 'dislike';
+      if (val.includes('neutral')) return 'neutral';
+      return 'like';
+    }
 
     function getPinIcon(sentiment) {
-      var val = sentiment ? sentiment.toLowerCase() : 'like';
+      var val = normalizeSentiment(sentiment);
       if (val === 'dislike') return redPinIcon;
       if (val === 'neutral') return neutralPinIcon;
       return greenPinIcon;
     }
 
     function getSentimentLabel(sentiment) {
-      var val = sentiment ? sentiment.toLowerCase() : 'like';
+      var val = normalizeSentiment(sentiment);
       if (val === 'dislike') return '👎 Dislike';
       if (val === 'neutral') return '😐 Neutral';
       return '👍 Like';
@@ -469,8 +477,9 @@
         .then(function(data) {
           userComments = data;
           userComments.forEach(function(c) {
-            var marker = L.marker([c.lat, c.lng], { icon: getPinIcon(c.sentiment) }).addTo(map);
-            var sentimentLabel = getSentimentLabel(c.sentiment);
+            var rawSentiment = c.sentiment || c.Sentiment || c.SENTIMENT || 'like';
+            var marker = L.marker([c.lat, c.lng], { icon: getPinIcon(rawSentiment) }).addTo(map);
+            var sentimentLabel = getSentimentLabel(rawSentiment);
             marker.bindPopup('<b>' + censorText(c.name) + '</b> (' + sentimentLabel + ')<br>' + censorText(c.text), { maxWidth: 240 });
             c.marker = marker;
           });
@@ -582,7 +591,8 @@
       });
       list.innerHTML = '';
       userComments.forEach(function(c) {
-        var val = c.sentiment ? c.sentiment.toLowerCase() : 'like';
+        var rawSentiment = c.sentiment || c.Sentiment || c.SENTIMENT || 'like';
+        var val = normalizeSentiment(rawSentiment);
         var badgeHTML = '<span class="sentiment-badge sentiment-like">👍 Like</span>';
         if (val === 'dislike') {
           badgeHTML = '<span class="sentiment-badge sentiment-dislike">👎 Dislike</span>';
