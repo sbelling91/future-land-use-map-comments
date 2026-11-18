@@ -232,9 +232,9 @@
           <input type="email" id="comment-email" placeholder="e.g. jane.doe@example.com" required />
           <label for="comment-sentiment">Feedback Type (Pin Color):</label>
           <select id="comment-sentiment" onchange="updatePendingPinIcon()" required>
-            <option value="like">👍 Agree (Teal Pin)</option>
+            <option value="agree">👍 Agree (Teal Pin)</option>
             <option value="neutral">😐 Neutral (Slate Pin)</option>
-            <option value="dislike">👎 Disagree (Orange Pin)</option>
+            <option value="disagree">👎 Disagree (Orange Pin)</option>
           </select>
           <label for="comment-text">Feedback / Comment:</label>
           <textarea id="comment-text" rows="4" placeholder="What are your thoughts on this future land use?" required></textarea>
@@ -272,10 +272,10 @@
     var neutralPinIcon = createColoredPin('#7c9ba9'); /* Cream (Neutral) */
     var redPinIcon = createColoredPin('#f05326');     /* Orange (Dislike) */
 
-    function normalizeSentiment(sentiment) {
+function normalizeSentiment(sentiment) {
       if (!sentiment) return 'like';
       var val = sentiment.toString().trim().toLowerCase();
-      if (val.includes('dislike')) return 'dislike';
+      if (val.includes('dislike') || val.includes('disagree')) return 'dislike';
       if (val.includes('neutral')) return 'neutral';
       return 'like';
     }
@@ -289,19 +289,10 @@
 
     function getSentimentLabel(sentiment) {
       var val = normalizeSentiment(sentiment);
-      if (val === 'dislike') return '👎 Dislike';
+      if (val === 'dislike') return '👎 Disagree';
       if (val === 'neutral') return '😐 Neutral';
-      return '👍 Like';
-    }
-
-    function buildPopupHTML(name, sentiment, text) {
-      var sentimentLabel = getSentimentLabel(sentiment);
-      var popupContent = '<b>' + censorText(name) + '</b> (' + sentimentLabel + ')';
-      if (SHOW_COMMENT_TEXT && text) {
-        popupContent += '<br>' + censorText(text);
-      }
-      return popupContent;
-    }
+      return '👍 Agree';
+    }   
 
     /* PROFANITY FILTER */
     const BLOCKED_WORDS = [
