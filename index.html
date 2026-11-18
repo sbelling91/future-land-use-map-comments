@@ -542,8 +542,14 @@ function normalizeSentiment(sentiment) {
         .then(function(data) {
           userComments = data;
           userComments.forEach(function(c) {
+            var lat = parseFloat(c.lat || c.Lat || c.LAT);
+            var lng = parseFloat(c.lng || c.Lng || c.LNG);
+            if (isNaN(lat) || isNaN(lng)) {
+              console.warn("Skipping pin with invalid coordinates:", c);
+              return;
+            }
             var rawSentiment = c.sentiment || c.Sentiment || c.SENTIMENT || 'like';
-            var marker = L.marker([c.lat, c.lng], { icon: getPinIcon(rawSentiment) }).addTo(map);
+            var marker = L.marker([lat, lng], { icon: getPinIcon(rawSentiment) }).addTo(map);
             marker.bindPopup(buildPopupHTML(c.name, rawSentiment, c.text), { maxWidth: 240 });
             c.marker = marker;
           });
