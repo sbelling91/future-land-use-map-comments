@@ -674,13 +674,12 @@ function normalizeSentiment(sentiment) {
       userComments.forEach(function(c) {
         var rawSentiment = c.sentiment || c.Sentiment || c.SENTIMENT || 'like';
         var val = normalizeSentiment(rawSentiment);
-        var badgeHTML = '<span class="sentiment-badge sentiment-like">👍 Like</span>';
+        var badgeHTML = '<span class="sentiment-badge sentiment-like">👍 Agree</span>';
         if (val === 'dislike') {
-          badgeHTML = '<span class="sentiment-badge sentiment-dislike">👎 Dislike</span>';
+          badgeHTML = '<span class="sentiment-badge sentiment-dislike">👎 Disagree</span>';
         } else if (val === 'neutral') {
           badgeHTML = '<span class="sentiment-badge sentiment-neutral">😐 Neutral</span>';
         }
-
         var timestampHTML = c.timestamp ? ' <small>(' + c.timestamp + ')</small>' : '';
         var commentTextHTML = (SHOW_COMMENT_TEXT && c.text)
           ? '<br><span style="display: block; margin: 4px 0;">"' + censorText(c.text) + '"</span>'
