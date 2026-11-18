@@ -292,7 +292,18 @@ function normalizeSentiment(sentiment) {
       if (val === 'dislike') return '👎 Disagree';
       if (val === 'neutral') return '😐 Neutral';
       return '👍 Agree';
-    }   
+    }
+
+    function buildPopupHTML(name, sentiment, text) {
+      var sentimentLabel = getSentimentLabel(sentiment);
+      var popupContent = '<b>' + censorText(name) + '</b> (' + sentimentLabel + ')';
+      if (SHOW_COMMENT_TEXT && text) {
+        popupContent += '<br>' + censorText(text);
+      }
+      return popupContent;
+    }
+
+    /* PROFANITY FILTER */       
 
     /* PROFANITY FILTER */
     const BLOCKED_WORDS = [
