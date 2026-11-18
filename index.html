@@ -9,6 +9,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/esri-leaflet@3.0.12/dist/esri-leaflet.js"></script>
   <script src="https://unpkg.com/leaflet-geosearch@3.11.0/dist/geosearch.umd.js"></script>
+  <script src="https://www.google.com/recaptcha/enterprise.js?render=6LefDCcuAAAAAEspcKZW-AFJLtLCpEvLrCdeTGBI"></script>
   <style>
     body {
       margin: 0;
@@ -232,7 +233,7 @@
           <label for="comment-sentiment">Feedback Type (Pin Color):</label>
           <select id="comment-sentiment" onchange="updatePendingPinIcon()" required>
             <option value="like">👍 Like (Teal Pin)</option>
-            <option value="neutral">😐 Neutral (Slate Pin)</option>
+            <option value="neutral">😐 Neutral (Cream Pin)</option>
             <option value="dislike">👎 Dislike (Orange Pin)</option>
           </select>
           <label for="comment-text">Feedback / Comment:</label>
@@ -251,6 +252,7 @@
   </div>
   <script>
     var GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzhXpJk6rY9LRRPCu4NzL-wbmyKLdIP5V0fJGrMmka6LGcyJdxoQa1JJmbXQMAgh0U/exec";
+    var RECAPTCHA_SITE_KEY = "6LefDCcuAAAAAEspcKZW-AFJLtLCpEvLrCdeTGBI";
 
     /* SET TO true AT A LATER DATE TO REVEAL WRITTEN COMMENT TEXT IN SIDEBAR CARDS & PIN POPUPS */
     var SHOW_COMMENT_TEXT = false;
@@ -266,9 +268,9 @@
       });
     }
 
-    var greenPinIcon = createColoredPin('#39c1a1');   /* Teal (Like) */
-    var neutralPinIcon = createColoredPin('#7c9ba9'); /* Cream (Neutral) */
-    var redPinIcon = createColoredPin('#f05326');     /* Orange (Dislike) */
+    var greenPinIcon = createColoredPin('#57C4AD');   /* Teal (Like) */
+    var neutralPinIcon = createColoredPin('#E6E1BC'); /* Cream (Neutral) */
+    var redPinIcon = createColoredPin('#EDA247');     /* Orange (Dislike) */
 
     function normalizeSentiment(sentiment) {
       if (!sentiment) return 'like';
@@ -496,12 +498,16 @@
         { label: 'Mixed Use Corridor', color: '#FE8F8F' },
         { label: 'Traditional Corridor', color: '#F66060' },
 
-        { header: 'Districts' },
+        { header: 'Special Use & Infrastructure' },
         { label: 'Airport', color: '#CBEBFA' },
         { label: 'Campus', color: '#3194B0' },
         { label: 'Infrastructure', color: '#41539F' },
+
+        { header: 'Industrial' },
         { label: 'Maker - Trade Flex', color: '#9B9B9B' },
         { label: 'Industrial', color: '#717171' },
+
+        { header: 'Parks & Open Space' },
         { label: 'Park and Open Space', color: '#72E92C' }
       ];
 
@@ -611,40 +617,57 @@
         return;
       }
 
-      var commentData = {
-        id: Date.now(),
-        name: name,
-        email: email,
-        sentiment: sentiment,
-        text: text,
-        lat: currentCoords.lat,
-        lng: currentCoords.lng,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        likes: 0,
-        replies: []
-      };
+      function finalizeSubmission(recaptchaToken) {
+        var commentData = {
+          id: Date.now(),
+          name: name,
+          email: email,
+          sentiment: sentiment,
+          text: text,
+          lat: currentCoords.lat,
+          lng: currentCoords.lng,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          recaptchaToken: recaptchaToken || "",
+          likes: 0,
+          replies: []
+        };
 
-      if (!GOOGLE_SCRIPT_URL.includes("YOUR_GOOGLE_SCRIPT_URL_HERE")) {
-        fetch(GOOGLE_SCRIPT_URL, {
-          method: "POST",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify(commentData)
-        }).catch(function(err) { console.error("Error posting to sheet:", err); });
+        if (!GOOGLE_SCRIPT_URL.includes("YOUR_GOOGLE_SCRIPT_URL_HERE")) {
+          fetch(GOOGLE_SCRIPT_URL, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify(commentData)
+          }).catch(function(err) { console.error("Error posting to sheet:", err); });
+        }
+
+        activeMarker.setIcon(getPinIcon(sentiment));
+        activeMarker.bindPopup(buildPopupHTML(commentData.name, sentiment, commentData.text), { maxWidth: 240 });
+        commentData.marker = activeMarker;
+        userComments.push(commentData);
+        activeMarker = null;
+        renderCommentsList();
+
+        document.getElementById('comment-name').value = '';
+        document.getElementById('comment-email').value = '';
+        document.getElementById('comment-sentiment').value = 'like';
+        document.getElementById('comment-text').value = '';
+        document.getElementById('form-container').style.display = 'none';
+        document.getElementById('submission-confirmation').style.display = 'block';
       }
 
-      activeMarker.setIcon(getPinIcon(sentiment));
-      activeMarker.bindPopup(buildPopupHTML(commentData.name, sentiment, commentData.text), { maxWidth: 240 });
-      commentData.marker = activeMarker;
-      userComments.push(commentData);
-      activeMarker = null;
-      renderCommentsList();
-
-      document.getElementById('comment-name').value = '';
-      document.getElementById('comment-email').value = '';
-      document.getElementById('comment-sentiment').value = 'like';
-      document.getElementById('comment-text').value = '';
-      document.getElementById('form-container').style.display = 'none';
-      document.getElementById('submission-confirmation').style.display = 'block';
+      if (typeof grecaptcha !== 'undefined' && grecaptcha.enterprise) {
+        grecaptcha.enterprise.ready(async function() {
+          try {
+            const token = await grecaptcha.enterprise.execute(RECAPTCHA_SITE_KEY, { action: 'SUBMIT_FEEDBACK' });
+            finalizeSubmission(token);
+          } catch (err) {
+            console.error("reCAPTCHA error:", err);
+            finalizeSubmission("");
+          }
+        });
+      } else {
+        finalizeSubmission("");
+      }
     };
 
     function renderCommentsList() {
