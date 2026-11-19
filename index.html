@@ -296,7 +296,8 @@ function normalizeSentiment(sentiment) {
 
     function buildPopupHTML(name, sentiment, text) {
       var sentimentLabel = getSentimentLabel(sentiment);
-      var popupContent = '<b>' + censorText(name) + '</b> (' + sentimentLabel + ')';
+      var displayName = name ? censorText(name) : 'Community Feedback';
+      var popupContent = '<b>' + displayName + '</b> (' + sentimentLabel + ')';
       if (SHOW_COMMENT_TEXT && text) {
         popupContent += '<br>' + censorText(text);
       }
