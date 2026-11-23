@@ -294,16 +294,23 @@ function normalizeSentiment(sentiment) {
       return '👍 Agree';
     }
 
+    function getFirstName(fullName) {
+      if (!fullName) return '';
+      var cleaned = String(fullName).trim();
+      if (!cleaned) return '';
+      return cleaned.split(/\s+/)[0];
+    }
+
     function buildPopupHTML(name, sentiment, text) {
       var sentimentLabel = getSentimentLabel(sentiment);
-      var displayName = name ? censorText(name) : 'Community Feedback';
+      var firstName = getFirstName(name);
+      var displayName = firstName ? censorText(firstName) : 'Community Feedback';
       var popupContent = '<b>' + displayName + '</b> (' + sentimentLabel + ')';
       if (SHOW_COMMENT_TEXT && text) {
         popupContent += '<br>' + censorText(text);
       }
       return popupContent;
     }
-
     /* PROFANITY FILTER */       
 
     /* PROFANITY FILTER */
@@ -714,4 +721,5 @@ function normalizeSentiment(sentiment) {
   </script>
 </body>
 </html>
+
 
