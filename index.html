@@ -709,7 +709,8 @@ function normalizeSentiment(sentiment) {
         var commentTextHTML = (SHOW_COMMENT_TEXT && c.text)
           ? '<br><span style="display: block; margin: 4px 0;">"' + censorText(c.text) + '"</span>'
           : '';
-        var displayName = c.name ? censorText(c.name) : 'Community Feedback';
+        var firstName = getFirstName(c.name);
+        var displayName = firstName ? censorText(firstName) : 'Community Feedback';
         var cardHTML =
           '<div class="comment-card" id="card-' + c.id + '">' +
             '<strong>' + displayName + '</strong> ' + badgeHTML + timestampHTML +
@@ -721,5 +722,6 @@ function normalizeSentiment(sentiment) {
   </script>
 </body>
 </html>
+
 
 
